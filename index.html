@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#08110f">
+    <title>Home Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="dashboard" aria-live="polite">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Home status</p>
+          <h1 id="clock">--:--</h1>
+          <p id="dateLine" class="muted">Loading date</p>
+        </div>
+        <button id="settingsButton" class="icon-button" type="button" aria-label="Settings">⚙</button>
+      </section>
+
+      <section class="weather-panel">
+        <div class="weather-main">
+          <div>
+            <p id="locationLabel" class="eyebrow">Home</p>
+            <div class="temperature-row">
+              <span id="currentTemp" class="temperature">--</span>
+              <span class="degree">°F</span>
+            </div>
+            <p id="weatherSummary" class="summary">Loading weather</p>
+          </div>
+          <div id="weatherIcon" class="weather-icon" aria-hidden="true">☀</div>
+        </div>
+
+        <div class="weather-metrics">
+          <div>
+            <span class="metric-label">Feels</span>
+            <strong id="feelsLike">--°</strong>
+          </div>
+          <div>
+            <span class="metric-label">Humidity</span>
+            <strong id="humidity">--%</strong>
+          </div>
+          <div>
+            <span class="metric-label">Wind</span>
+            <strong id="wind">-- mph</strong>
+          </div>
+          <div>
+            <span class="metric-label">High / Low</span>
+            <strong id="highLow">-- / --</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-header">
+        <h2>Today</h2>
+        <p id="updatedLine">Waiting for first refresh</p>
+      </section>
+
+      <section id="hourlyStrip" class="hourly-strip" aria-label="Hourly forecast"></section>
+
+      <section class="section-header">
+        <h2>Local Data</h2>
+        <p id="localStatus">Demo values until local endpoints are configured</p>
+      </section>
+
+      <section id="localGrid" class="local-grid" aria-label="Local home data"></section>
+
+      <section class="section-header">
+        <h2>Forecast</h2>
+        <p>Next 5 days</p>
+      </section>
+
+      <section id="dailyList" class="daily-list" aria-label="Daily forecast"></section>
+    </main>
+
+    <dialog id="settingsDialog" class="settings-dialog">
+      <form id="settingsForm" method="dialog">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">Dashboard settings</p>
+            <h2>Device-only Config</h2>
+          </div>
+          <button class="icon-button dark" type="submit" value="cancel" aria-label="Close">×</button>
+        </div>
+
+        <label>
+          Location label
+          <input id="settingLocation" name="locationLabel" autocomplete="off">
+        </label>
+
+        <div class="field-row">
+          <label>
+            Latitude
+            <input id="settingLat" name="latitude" inputmode="decimal">
+          </label>
+          <label>
+            Longitude
+            <input id="settingLon" name="longitude" inputmode="decimal">
+          </label>
+        </div>
+
+        <label>
+          Refresh interval, minutes
+          <input id="settingRefresh" name="refreshMinutes" inputmode="numeric">
+        </label>
+
+        <label>
+          Local cards JSON
+          <textarea id="settingLocalCards" name="localCards" spellcheck="false"></textarea>
+        </label>
+
+        <p class="settings-help">
+          Store private URLs and tokens here only on the Hearth. They are not written to GitHub.
+        </p>
+
+        <div class="dialog-actions">
+          <button id="resetSettings" class="secondary" type="button">Reset</button>
+          <button class="primary" type="submit" value="save">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

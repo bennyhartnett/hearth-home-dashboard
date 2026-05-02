@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+*.local
+local-config.*
+secrets.*
+HEARTH_ADB_RUNBOOK.md
+*.apk
+*.zip
+*.png
