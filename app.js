@@ -61,7 +61,9 @@ const DEFAULT_SETTINGS = {
   refreshMinutes: 5,
   mobilityRadiusMiles: 2,
   mapStyle: "streets",
-  wmataKey: ""
+  wmataKey: "",
+  fallbackLat: "",
+  fallbackLon: ""
 };
 
 let settings = loadSettings();
@@ -228,11 +230,35 @@ function updateUserMarker(location) {
   if (!map) return;
   layers.user.clearLayers();
   L.marker([location.lat, location.lon], { icon: markerIcon("user") })
-    .bindPopup("Current location")
+    .bindPopup(location.source === "fallback" ? "Saved fallback location" : "Current location")
     .addTo(layers.user);
   map.invalidateSize();
   map.setView([location.lat, location.lon], 15);
-  setText("mapStatus", `Location accuracy ${Math.round(location.accuracy)} m`);
+  setText(
+    "mapStatus",
+    location.source === "fallback"
+      ? "Using local-only saved location"
+      : `Location accuracy ${Math.round(location.accuracy)} m`
+  );
+}
+
+function getFallbackLocation() {
+  const lat = Number(settings.fallbackLat);
+  const lon = Number(settings.fallbackLon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon, accuracy: 0, source: "fallback" };
+}
+
+function useFallbackLocation(reason) {
+  const fallback = getFallbackLocation();
+  if (!fallback) return false;
+  currentLocation = fallback;
+  showNotice(`${reason} Using the saved local-only fallback location from this browser.`);
+  if (!map) initMap();
+  updateUserMarker(currentLocation);
+  refreshAll();
+  return true;
 }
 
 function requestLocation() {
@@ -247,7 +273,8 @@ function requestLocation() {
       currentLocation = {
         lat: position.coords.latitude,
         lon: position.coords.longitude,
-        accuracy: position.coords.accuracy || 0
+        accuracy: position.coords.accuracy || 0,
+        source: "browser"
       };
       hideNotice();
       if (!map) initMap();
@@ -255,6 +282,7 @@ function requestLocation() {
       refreshAll();
     },
     (error) => {
+      if (useFallbackLocation(`Browser location unavailable: ${error.message}.`)) return;
       showNotice(`Location unavailable: ${error.message}. Tap Locate after enabling location permission.`);
       setText("weatherSummary", "Location required");
       setEmpty("driveList", "Location required for drive estimates.");
@@ -614,6 +642,8 @@ function fillSettingsForm() {
   $("settingLocation").value = settings.locationLabel;
   $("settingRefresh").value = settings.refreshMinutes;
   $("settingMobilityRadius").value = settings.mobilityRadiusMiles;
+  $("settingFallbackLat").value = settings.fallbackLat || "";
+  $("settingFallbackLon").value = settings.fallbackLon || "";
   $("settingWmataKey").value = settings.wmataKey || "";
 }
 
@@ -640,6 +670,8 @@ function wireSettings() {
       locationLabel: $("settingLocation").value.trim() || "Current Location",
       refreshMinutes: Math.max(1, Number($("settingRefresh").value) || 5),
       mobilityRadiusMiles: Math.max(0.1, Number($("settingMobilityRadius").value) || 1),
+      fallbackLat: $("settingFallbackLat").value.trim(),
+      fallbackLon: $("settingFallbackLon").value.trim(),
       wmataKey: $("settingWmataKey").value.trim()
     });
     $("settingsDialog").close();

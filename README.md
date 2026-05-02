@@ -25,7 +25,7 @@ The page is intentionally safe for a public repo:
 
 This dashboard does not use fallback sample values. If a live source is unavailable, rate-limited, lacks CORS support, or requires configuration, the card shows that state instead of made-up data.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for the local sections to load. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the Hearth settings dialog so the device can still use live data feeds without committing a location to GitHub. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository.
 
 ## Configure On The Hearth
 
@@ -34,6 +34,7 @@ Open the dashboard, tap the gear button, and set:
 - Location label
 - Refresh interval
 - Mobility radius
+- Optional fallback latitude and longitude
 - Optional WMATA API key
 
 Those settings are stored in the Hearth browser's local storage, not in this public repository.

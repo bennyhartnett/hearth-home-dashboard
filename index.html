@@ -167,13 +167,24 @@
           </label>
         </div>
 
+        <div class="field-row">
+          <label>
+            Fallback latitude
+            <input id="settingFallbackLat" name="fallbackLat" inputmode="decimal" autocomplete="off">
+          </label>
+          <label>
+            Fallback longitude
+            <input id="settingFallbackLon" name="fallbackLon" inputmode="decimal" autocomplete="off">
+          </label>
+        </div>
+
         <label>
           WMATA API key for Clarendon arrivals
           <input id="settingWmataKey" name="wmataKey" type="password" autocomplete="off">
         </label>
 
         <p class="settings-help">
-          The WMATA key is stored only in this browser's local storage. The public GitHub repo does not contain device location, keys, ADB data, or private network URLs.
+          The WMATA key and fallback coordinates are stored only in this browser's local storage. The public GitHub repo does not contain device location, keys, ADB data, or private network URLs.
         </p>
 
         <div class="dialog-actions">
