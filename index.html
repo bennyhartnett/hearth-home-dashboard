@@ -5,71 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#08110f">
     <title>Home Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css?v=2">
   </head>
   <body>
+    <div class="motion-background" aria-hidden="true"></div>
+
     <main class="dashboard" aria-live="polite">
       <section class="topbar">
         <div>
-          <p class="eyebrow">Home status</p>
+          <p class="eyebrow">Live home board</p>
           <h1 id="clock">--:--</h1>
           <p id="dateLine" class="muted">Loading date</p>
         </div>
-        <button id="settingsButton" class="icon-button" type="button" aria-label="Settings">⚙</button>
+        <div class="top-actions">
+          <button id="locateButton" class="text-button" type="button">Locate</button>
+          <button id="settingsButton" class="icon-button" type="button" aria-label="Settings">
+            <span aria-hidden="true">Settings</span>
+          </button>
+        </div>
       </section>
 
-      <section class="weather-panel">
-        <div class="weather-main">
-          <div>
-            <p id="locationLabel" class="eyebrow">Home</p>
+      <section id="locationNotice" class="notice">
+        Requesting browser location. Live weather, maps, restaurants, mobility, and drive estimates start after location is available.
+      </section>
+
+      <section class="hero-grid">
+        <article class="weather-panel">
+          <div class="weather-copy">
+            <p id="locationLabel" class="eyebrow">Current location</p>
             <div class="temperature-row">
               <span id="currentTemp" class="temperature">--</span>
-              <span class="degree">°F</span>
+              <span class="degree">&deg;F</span>
             </div>
-            <p id="weatherSummary" class="summary">Loading weather</p>
+            <p id="weatherSummary" class="summary">Waiting for location</p>
           </div>
-          <div id="weatherIcon" class="weather-icon" aria-hidden="true">☀</div>
-        </div>
 
-        <div class="weather-metrics">
-          <div>
-            <span class="metric-label">Feels</span>
-            <strong id="feelsLike">--°</strong>
+          <div id="skyScene" class="sky-scene day clear" aria-label="Animated weather scene">
+            <div class="stars"></div>
+            <div class="sun"></div>
+            <div class="moon"></div>
+            <div class="cloud cloud-a"></div>
+            <div class="cloud cloud-b"></div>
+            <div class="rain"></div>
+            <div class="snow"></div>
+            <div class="bolt"></div>
           </div>
-          <div>
-            <span class="metric-label">Humidity</span>
-            <strong id="humidity">--%</strong>
+
+          <div class="weather-metrics">
+            <div>
+              <span class="metric-label">Feels</span>
+              <strong id="feelsLike">--&deg;</strong>
+            </div>
+            <div>
+              <span class="metric-label">Humidity</span>
+              <strong id="humidity">--%</strong>
+            </div>
+            <div>
+              <span class="metric-label">Wind</span>
+              <strong id="wind">-- mph</strong>
+            </div>
+            <div>
+              <span class="metric-label">High / Low</span>
+              <strong id="highLow">-- / --</strong>
+            </div>
           </div>
-          <div>
-            <span class="metric-label">Wind</span>
-            <strong id="wind">-- mph</strong>
+        </article>
+
+        <article class="map-panel">
+          <div class="section-header compact">
+            <div>
+              <h2>Map</h2>
+              <p id="mapStatus">Waiting for location</p>
+            </div>
+            <div id="styleButtons" class="segmented" aria-label="Map style"></div>
           </div>
-          <div>
-            <span class="metric-label">High / Low</span>
-            <strong id="highLow">-- / --</strong>
-          </div>
-        </div>
+          <div id="map" class="map"></div>
+        </article>
       </section>
 
       <section class="section-header">
-        <h2>Today</h2>
+        <h2>Next Hours</h2>
         <p id="updatedLine">Waiting for first refresh</p>
       </section>
-
       <section id="hourlyStrip" class="hourly-strip" aria-label="Hourly forecast"></section>
 
-      <section class="section-header">
-        <h2>Local Data</h2>
-        <p id="localStatus">Demo values until local endpoints are configured</p>
-      </section>
+      <section class="data-grid">
+        <article class="data-panel">
+          <div class="section-header compact">
+            <div>
+              <h2>Driving</h2>
+              <p>Route estimates from current location</p>
+            </div>
+          </div>
+          <div id="driveList" class="stack-list"></div>
+        </article>
 
-      <section id="localGrid" class="local-grid" aria-label="Local home data"></section>
+        <article class="data-panel">
+          <div class="section-header compact">
+            <div>
+              <h2>Metro</h2>
+              <p>Clarendon Station arrivals</p>
+            </div>
+          </div>
+          <div id="metroList" class="stack-list"></div>
+        </article>
+
+        <article class="data-panel">
+          <div class="section-header compact">
+            <div>
+              <h2>Bikes & Scooters</h2>
+              <p id="mobilityStatus">Waiting for location</p>
+            </div>
+          </div>
+          <div id="mobilityList" class="stack-list"></div>
+        </article>
+
+        <article class="data-panel">
+          <div class="section-header compact">
+            <div>
+              <h2>Open Nearby</h2>
+              <p id="restaurantStatus">Restaurants within 0.7 miles</p>
+            </div>
+          </div>
+          <div id="restaurantList" class="stack-list"></div>
+        </article>
+      </section>
 
       <section class="section-header">
         <h2>Forecast</h2>
         <p>Next 5 days</p>
       </section>
-
       <section id="dailyList" class="daily-list" aria-label="Daily forecast"></section>
     </main>
 
@@ -80,7 +146,9 @@
             <p class="eyebrow">Dashboard settings</p>
             <h2>Device-only Config</h2>
           </div>
-          <button class="icon-button dark" type="submit" value="cancel" aria-label="Close">×</button>
+          <button class="icon-button dark" type="submit" value="cancel" aria-label="Close">
+            <span aria-hidden="true">Close</span>
+          </button>
         </div>
 
         <label>
@@ -90,27 +158,22 @@
 
         <div class="field-row">
           <label>
-            Latitude
-            <input id="settingLat" name="latitude" inputmode="decimal">
+            Refresh interval, minutes
+            <input id="settingRefresh" name="refreshMinutes" inputmode="numeric">
           </label>
           <label>
-            Longitude
-            <input id="settingLon" name="longitude" inputmode="decimal">
+            Mobility radius, miles
+            <input id="settingMobilityRadius" name="mobilityRadiusMiles" inputmode="decimal">
           </label>
         </div>
 
         <label>
-          Refresh interval, minutes
-          <input id="settingRefresh" name="refreshMinutes" inputmode="numeric">
-        </label>
-
-        <label>
-          Local cards JSON
-          <textarea id="settingLocalCards" name="localCards" spellcheck="false"></textarea>
+          WMATA API key for Clarendon arrivals
+          <input id="settingWmataKey" name="wmataKey" type="password" autocomplete="off">
         </label>
 
         <p class="settings-help">
-          Store private URLs and tokens here only on the Hearth. They are not written to GitHub.
+          The WMATA key is stored only in this browser's local storage. The public GitHub repo does not contain device location, keys, ADB data, or private network URLs.
         </p>
 
         <div class="dialog-actions">
@@ -120,6 +183,8 @@
       </form>
     </dialog>
 
-    <script src="app.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
+    <script src="app.js?v=2"></script>
   </body>
 </html>
