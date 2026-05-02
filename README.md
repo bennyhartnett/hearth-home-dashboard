@@ -38,3 +38,11 @@ Open the dashboard, tap the gear button, and set:
 - Optional WMATA API key
 
 Those settings are stored in the Hearth browser's local storage, not in this public repository.
+
+For kiosk setup over ADB, the same device-only settings can be saved by opening a one-time URL with query parameters:
+
+```text
+https://bennyhartnett.github.io/hearth-home-dashboard/?saveLocalSettings=1&locationLabel=Home&fallbackLat=LATITUDE&fallbackLon=LONGITUDE
+```
+
+The page saves the allowed settings locally, then strips those parameters from the address bar. Use real coordinates only on the private Hearth device, not in commits.

@@ -67,6 +67,7 @@ const DEFAULT_SETTINGS = {
 };
 
 let settings = loadSettings();
+applySettingsFromUrl();
 let currentLocation = null;
 let refreshTimer = null;
 let map = null;
@@ -87,6 +88,33 @@ function loadSettings() {
 function saveSettings(nextSettings) {
   settings = { ...DEFAULT_SETTINGS, ...nextSettings };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+function applySettingsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("saveLocalSettings") !== "1") return;
+
+  const nextSettings = { ...settings };
+  const allowedKeys = [
+    "locationLabel",
+    "refreshMinutes",
+    "mobilityRadiusMiles",
+    "fallbackLat",
+    "fallbackLon",
+    "wmataKey"
+  ];
+
+  allowedKeys.forEach((key) => {
+    if (params.has(key)) nextSettings[key] = params.get(key).trim();
+  });
+
+  saveSettings(nextSettings);
+  params.delete("saveLocalSettings");
+  allowedKeys.forEach((key) => params.delete(key));
+
+  const cleanQuery = params.toString();
+  const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
+  window.history.replaceState(null, "", cleanUrl);
 }
 
 function setText(id, text) {
