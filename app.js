@@ -243,6 +243,7 @@ function updateUserMarker(location) {
 }
 
 function getFallbackLocation() {
+  if (String(settings.fallbackLat).trim() === "" || String(settings.fallbackLon).trim() === "") return null;
   const lat = Number(settings.fallbackLat);
   const lon = Number(settings.fallbackLon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
