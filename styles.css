@@ -186,6 +186,8 @@ body[data-theme="light"] .map-overlay {
   white-space: nowrap;
 }
 
+.pill[hidden] { display: none; }
+
 .pill-dot {
   width: 8px;
   height: 8px;
