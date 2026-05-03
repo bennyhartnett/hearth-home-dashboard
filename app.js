@@ -24,10 +24,10 @@ const WEATHER_CODES = {
 
 const MAP_STYLES = {
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
   },
   light: {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
   }
 };
 
@@ -363,7 +363,7 @@ function initMap() {
     boxZoom: false,
     keyboard: false,
     tap: false
-  }).setView([38.889, -77.05], 14);
+  }).setView([38.889, -77.05], 15);
 
   layers = {
     user: L.layerGroup().addTo(map),
