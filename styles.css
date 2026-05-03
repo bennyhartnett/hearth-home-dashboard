@@ -152,7 +152,8 @@ button {
 }
 
 .sticky-region {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 8;
   min-height: 0;
 }
@@ -309,12 +310,13 @@ body[data-theme="light"] .notice {
 .weather-panel {
   height: 620px;
   min-height: 0;
-  padding: 30px;
+  padding: 24px;
   display: grid;
-  grid-template-rows: auto 145px auto;
-  gap: 22px;
+  grid-template-rows: auto 136px minmax(0, 1fr);
+  gap: 14px;
   background: var(--weather-bg);
   color: var(--weather-text);
+  overflow: hidden;
 }
 
 .weather-panel .eyebrow,
@@ -330,31 +332,35 @@ body[data-theme="light"] .notice {
 }
 
 .temperature {
-  font-size: 112px;
-  line-height: 0.88;
+  font-size: 98px;
+  line-height: 0.9;
   font-weight: 900;
 }
 
 .degree {
   padding-top: 8px;
-  font-size: 42px;
+  font-size: 36px;
   font-weight: 850;
 }
 
 .summary {
-  margin-top: 14px;
-  font-size: 24px;
+  margin-top: 8px;
+  font-size: 21px;
   font-weight: 750;
 }
 
 .weather-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .weather-metrics div {
-  min-height: 78px;
-  padding: 14px;
+  min-height: 64px;
+  padding: 11px 12px;
   border: 1px solid var(--metric-border);
   border-radius: 8px;
   background: var(--metric-bg);
@@ -366,7 +372,7 @@ body[data-theme="light"] .notice {
 
 .metric-label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   font-size: 13px;
   font-weight: 850;
   text-transform: uppercase;
@@ -375,12 +381,13 @@ body[data-theme="light"] .notice {
 
 .weather-metrics strong {
   display: block;
-  font-size: 23px;
+  font-size: 21px;
+  line-height: 1.16;
 }
 
 .sky-scene {
   position: relative;
-  min-height: 160px;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(12, 25, 21, 0.12);
   border-radius: 8px;
