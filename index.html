@@ -7,7 +7,7 @@
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306100c'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
   </head>
   <body>
     <main class="dashboard" aria-live="polite">
@@ -33,16 +33,9 @@
       </section>
 
       <article class="weather-card glass">
-        <div class="weather-main">
-          <div class="weather-headline">
-            <p id="locationLabel" class="eyebrow">Current location</p>
-            <div class="temperature-row">
-              <span id="currentTemp" class="temperature">--</span>
-              <span class="degree">&deg;</span>
-            </div>
-            <p id="weatherSummary" class="summary">Waiting for location</p>
-          </div>
+        <p id="locationLabel" class="eyebrow">Current location</p>
 
+        <div class="weather-hero">
           <div id="skyScene" class="sky-scene day clear" aria-hidden="true">
             <div class="stars"></div>
             <div class="sun"></div>
@@ -52,6 +45,13 @@
             <div class="rain"></div>
             <div class="snow"></div>
             <div class="bolt"></div>
+          </div>
+          <div class="weather-overlay">
+            <div class="temperature-row">
+              <span id="currentTemp" class="temperature">--</span>
+              <span class="degree">&deg;</span>
+            </div>
+            <p id="weatherSummary" class="summary">Waiting for location</p>
           </div>
         </div>
 
@@ -63,10 +63,6 @@
           <div>
             <span class="metric-label">Sunset</span>
             <strong id="sunsetTime">--</strong>
-          </div>
-          <div>
-            <span class="metric-label">Daylight</span>
-            <strong id="daylightLength">--</strong>
           </div>
         </div>
 
@@ -88,24 +84,8 @@
             <strong id="wind">--</strong>
           </div>
           <div>
-            <span class="metric-label">UV Index</span>
-            <strong id="uvIndex">--</strong>
-          </div>
-          <div>
             <span class="metric-label">Air Quality</span>
             <strong id="airQuality">--</strong>
-          </div>
-          <div>
-            <span class="metric-label">Pressure</span>
-            <strong id="pressure">--</strong>
-          </div>
-          <div>
-            <span class="metric-label">Visibility</span>
-            <strong id="visibility">--</strong>
-          </div>
-          <div>
-            <span class="metric-label">Dew Point</span>
-            <strong id="dewPoint">--&deg;</strong>
           </div>
           <div>
             <span class="metric-label">Cloud Cover</span>
@@ -177,6 +157,9 @@
       </section>
 
       <div class="floating-actions">
+        <button id="themeButton" class="floating-button" type="button" aria-label="Toggle theme">
+          <span class="section-icon" data-icon="moon" aria-hidden="true"></span>
+        </button>
         <button id="locateButton" class="floating-button" type="button" aria-label="Update location">
           <span class="section-icon" data-icon="locate" aria-hidden="true"></span>
         </button>
@@ -278,6 +261,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>

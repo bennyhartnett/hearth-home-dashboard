@@ -70,11 +70,15 @@ let refreshTimer = null;
 let metroTimer = null;
 let map = null;
 let tileLayer = null;
+let currentTileUrl = null;
 let layers = {};
 let activeTheme = "dark";
 let wakeLock = null;
 let driveRoutes = new Map();
 let lastDailyData = null;
+let userMarker = null;
+let lastUserLatLon = null;
+let mapCenteredOnce = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -153,7 +157,10 @@ function iconSvg(name) {
     train: '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="14.5" rx="3.5"/><path d="M5 10.5h14M9 21l2.5-3M15 21l-2.5-3"/><circle cx="9" cy="14" r="0.9" fill="currentColor"/><circle cx="15" cy="14" r="0.9" fill="currentColor"/></svg>',
     locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="9"/><path d="M12 1.5v3M12 19.5v3M22.5 12h-3M4.5 12h-3"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
-    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.6a1.5 1.5 0 0 0 .3 1.6l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.5 1.5 0 0 0-1.6-.3 1.5 1.5 0 0 0-.9 1.4V20a2 2 0 1 1-4 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.6.3l-.1.1A2 2 0 1 1 4.9 16l.1-.1a1.5 1.5 0 0 0 .3-1.6 1.5 1.5 0 0 0-1.4-.9H4a2 2 0 1 1 0-4h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.6L4.9 6.7A2 2 0 1 1 7.7 4l.1.1a1.5 1.5 0 0 0 1.6.3h.1a1.5 1.5 0 0 0 .9-1.4V3a2 2 0 1 1 4 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.6-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.5 1.5 0 0 0-.3 1.6v.1a1.5 1.5 0 0 0 1.4.9H21a2 2 0 1 1 0 4h-.1a1.5 1.5 0 0 0-1.4.9Z"/></svg>'
+    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.6a1.5 1.5 0 0 0 .3 1.6l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.5 1.5 0 0 0-1.6-.3 1.5 1.5 0 0 0-.9 1.4V20a2 2 0 1 1-4 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.6.3l-.1.1A2 2 0 1 1 4.9 16l.1-.1a1.5 1.5 0 0 0 .3-1.6 1.5 1.5 0 0 0-1.4-.9H4a2 2 0 1 1 0-4h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.6L4.9 6.7A2 2 0 1 1 7.7 4l.1.1a1.5 1.5 0 0 0 1.6.3h.1a1.5 1.5 0 0 0 .9-1.4V3a2 2 0 1 1 4 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.6-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.5 1.5 0 0 0-.3 1.6v.1a1.5 1.5 0 0 0 1.4.9H21a2 2 0 1 1 0 4h-.1a1.5 1.5 0 0 0-1.4.9Z"/></svg>',
+    moon: '<svg viewBox="0 0 24 24"><path d="M20.5 14.5A8 8 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.5 4.5l2.1 2.1M17.4 17.4l2.1 2.1M4.5 19.5l2.1-2.1M17.4 6.6l2.1-2.1"/></svg>',
+    auto: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12a9 9 0 0 0 9 9V3a9 9 0 0 0-9 9Z" fill="currentColor"/></svg>'
   };
   return icons[name] || icons.pin;
 }
@@ -237,6 +244,31 @@ function applyTheme(theme) {
   document.body.dataset.theme = activeTheme;
   document.documentElement.style.colorScheme = activeTheme;
   setMapStyle(activeTheme);
+  updateThemeButton();
+}
+
+function updateThemeButton() {
+  const button = $("themeButton");
+  if (!button) return;
+  const mode = settings.themeMode || "auto";
+  const iconName = mode === "light" ? "sun" : mode === "dark" ? "moon" : "auto";
+  const icon = button.querySelector(".section-icon");
+  if (icon) icon.innerHTML = iconSvg(iconName);
+  button.setAttribute("aria-label", `Theme: ${mode}`);
+  button.title = `Theme: ${mode}`;
+}
+
+function cycleTheme() {
+  const order = ["auto", "light", "dark"];
+  const current = settings.themeMode || "auto";
+  const next = order[(order.indexOf(current) + 1) % order.length];
+  saveSettings({ ...settings, themeMode: next });
+  if (next === "light" || next === "dark") {
+    applyTheme(next);
+  } else if (lastDailyData) {
+    applyThemeFromSun(lastDailyData);
+  }
+  updateThemeButton();
 }
 
 function applyThemeFromSun(daily) {
@@ -259,7 +291,23 @@ function applyThemeFromSun(daily) {
 
 function updateClock() {
   const now = new Date();
-  setText("clock", formatTimeWithSeconds(now));
+  const hourMin = new Intl.DateTimeFormat([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).format(now);
+  const sec = String(now.getSeconds()).padStart(2, "0");
+  const lastSpace = hourMin.lastIndexOf(" ");
+  const time = lastSpace > -1 ? hourMin.slice(0, lastSpace) : hourMin;
+  const period = lastSpace > -1 ? hourMin.slice(lastSpace + 1) : "";
+
+  const clockEl = $("clock");
+  if (clockEl) {
+    clockEl.innerHTML =
+      `<span class="clock-main">${escapeHtml(time)}</span>` +
+      `<span class="clock-tail">:${escapeHtml(sec)}${period ? ` ${escapeHtml(period)}` : ""}</span>`;
+  }
+
   setText("dateLine", formatDate(now));
   updateTrashReminder(now);
 }
@@ -381,9 +429,10 @@ function initMap() {
 function setMapStyle(key) {
   if (!map) return;
   const style = MAP_STYLES[key === "light" ? "light" : "dark"];
+  if (currentTileUrl === style.url && tileLayer) return;
   if (tileLayer) tileLayer.remove();
   tileLayer = L.tileLayer(style.url, { maxZoom: 19, attribution: "" }).addTo(map);
-  setTimeout(() => map.invalidateSize(), 100);
+  currentTileUrl = style.url;
 }
 
 function markerIcon(type) {
@@ -399,12 +448,23 @@ function markerIcon(type) {
 
 function updateUserMarker(location) {
   if (!map) return;
-  layers.user.clearLayers();
-  L.marker([location.lat, location.lon], { icon: markerIcon("user") })
-    .addTo(layers.user);
-  map.invalidateSize();
-  if ($("routeDetails")?.hidden !== false) {
-    map.setView([location.lat, location.lon], 15);
+  const latLon = [location.lat, location.lon];
+
+  if (userMarker) {
+    if (lastUserLatLon &&
+        lastUserLatLon[0] === latLon[0] &&
+        lastUserLatLon[1] === latLon[1]) {
+      return;
+    }
+    userMarker.setLatLng(latLon);
+  } else {
+    userMarker = L.marker(latLon, { icon: markerIcon("user") }).addTo(layers.user);
+  }
+  lastUserLatLon = latLon;
+
+  if (!mapCenteredOnce && $("routeDetails")?.hidden !== false) {
+    map.setView(latLon, 15);
+    mapCenteredOnce = true;
   }
 }
 
@@ -487,18 +547,11 @@ async function updateWeather(location) {
       "apparent_temperature",
       "weather_code",
       "wind_speed_10m",
-      "wind_gusts_10m",
-      "wind_direction_10m",
-      "pressure_msl",
-      "surface_pressure",
       "cloud_cover",
-      "visibility",
-      "dew_point_2m",
-      "uv_index",
       "is_day"
     ].join(","),
-    hourly: "temperature_2m,weather_code,precipitation_probability,precipitation,uv_index,visibility",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max"
+    hourly: "temperature_2m,weather_code,precipitation_probability,precipitation",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"
   });
 
   const [forecastResponse, airResponse] = await Promise.allSettled([
@@ -521,13 +574,9 @@ async function updateWeather(location) {
   setText("weatherSummary", summary);
   setText("feelsLike", `${round(current.apparent_temperature)}°`);
   setText("humidity", `${round(current.relative_humidity_2m)}%`);
-  setText("wind", formatWind(current));
+  setText("wind", `${round(current.wind_speed_10m)} mph`);
   setText("highLow", `${round(daily.temperature_2m_max?.[0])}° / ${round(daily.temperature_2m_min?.[0])}°`);
   setText("rainSoon", findNextRain(data.hourly || {}));
-  setText("uvIndex", formatUv(current.uv_index));
-  setText("pressure", formatPressure(current.pressure_msl ?? current.surface_pressure));
-  setText("visibility", formatVisibility(current.visibility));
-  setText("dewPoint", `${round(current.dew_point_2m)}°`);
   setText("cloudCover", `${round(current.cloud_cover)}%`);
   setText("updatedLine", `Updated ${formatTime(new Date())}`);
 
@@ -540,7 +589,6 @@ async function updateWeather(location) {
   const nextSunrise = sunriseToday && now < sunriseToday ? sunriseToday : sunriseTomorrow;
   setText("sunriseTime", nextSunrise ? formatTime(nextSunrise) : "--");
   setText("sunsetTime", sunsetToday ? formatTime(sunsetToday) : "--");
-  setText("daylightLength", formatDaylight(sunriseToday, sunsetToday));
 
   /* Air quality */
   if (airResponse.status === "fulfilled" && airResponse.value.ok) {
@@ -561,43 +609,6 @@ async function updateWeather(location) {
   renderDaily(daily);
 }
 
-function formatWind(current) {
-  const speed = round(current.wind_speed_10m);
-  if (speed === "--") return "--";
-  const direction = windDirection(current.wind_direction_10m);
-  return direction ? `${speed} ${direction}` : `${speed} mph`;
-}
-
-function windDirection(degrees) {
-  if (!Number.isFinite(degrees)) return "";
-  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  return dirs[Math.round(((degrees % 360) / 45)) % 8];
-}
-
-function formatUv(value) {
-  if (!Number.isFinite(value)) return "--";
-  const v = Math.round(value);
-  let label = "Low";
-  if (v >= 11) label = "Extreme";
-  else if (v >= 8) label = "Very High";
-  else if (v >= 6) label = "High";
-  else if (v >= 3) label = "Moderate";
-  return `${v} ${label}`;
-}
-
-function formatPressure(hpa) {
-  if (!Number.isFinite(hpa)) return "--";
-  const inHg = (hpa * 0.02953).toFixed(2);
-  return `${inHg} in`;
-}
-
-function formatVisibility(meters) {
-  if (!Number.isFinite(meters)) return "--";
-  const mi = meters / 1609.344;
-  if (mi >= 10) return "10+ mi";
-  return `${mi.toFixed(1)} mi`;
-}
-
 function formatAqi(value) {
   if (!Number.isFinite(value)) return "--";
   const v = Math.round(value);
@@ -608,16 +619,6 @@ function formatAqi(value) {
   else if (v > 100) label = "Sensitive";
   else if (v > 50) label = "Moderate";
   return `${v} ${label}`;
-}
-
-function formatDaylight(sunrise, sunset) {
-  if (!sunrise || !sunset) return "--";
-  const ms = sunset.getTime() - sunrise.getTime();
-  if (!Number.isFinite(ms) || ms <= 0) return "--";
-  const minutes = Math.round(ms / 60000);
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return `${hours}h ${remainder}m`;
 }
 
 function findNextRain(hourly) {
@@ -1229,6 +1230,7 @@ function wireSettings() {
   $("requestPermissions").addEventListener("click", requestPagePermissions);
   $("clearRouteButton").addEventListener("click", clearRoute);
   $("locateButton").addEventListener("click", () => requestLocation({ forceBrowser: true }));
+  $("themeButton").addEventListener("click", cycleTheme);
 
   $("resetSettings").addEventListener("click", () => {
     saveSettings({ ...DEFAULT_SETTINGS });
