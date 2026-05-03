@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   --bg: #07110f;
   --bg-2: #10261f;
   --panel: rgba(15, 32, 28, 0.86);
@@ -14,6 +14,34 @@
   --line: rgba(255, 255, 255, 0.14);
   --line-dark: rgba(12, 25, 21, 0.16);
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  --soft-panel: rgba(255, 255, 255, 0.07);
+  --weather-bg: linear-gradient(150deg, rgba(16, 35, 30, 0.96), rgba(24, 53, 43, 0.92));
+  --weather-text: var(--text);
+  --weather-muted: var(--muted);
+  --metric-bg: rgba(255, 255, 255, 0.07);
+  --metric-border: var(--line);
+}
+
+body[data-theme="light"] {
+  --bg: #f5f0e8;
+  --bg-2: #e5eadf;
+  --panel: rgba(255, 253, 248, 0.9);
+  --panel-strong: rgba(255, 253, 248, 0.96);
+  --text: #14231e;
+  --muted: #5a6f66;
+  --ink: #11221c;
+  --accent: #0f9d68;
+  --accent-2: #b86b16;
+  --blue: #1b73b7;
+  --line: rgba(18, 34, 28, 0.16);
+  --line-dark: rgba(18, 34, 28, 0.16);
+  --shadow: 0 18px 50px rgba(32, 42, 36, 0.14);
+  --soft-panel: rgba(20, 35, 30, 0.05);
+  --weather-bg: linear-gradient(150deg, rgba(255, 253, 248, 0.98), rgba(225, 242, 231, 0.95));
+  --weather-text: #10211b;
+  --weather-muted: #50635c;
+  --metric-bg: rgba(255, 255, 255, 0.58);
+  --metric-border: rgba(18, 34, 28, 0.12);
 }
 
 * {
@@ -47,6 +75,14 @@ body::before {
   animation: gradientDrift 24s ease-in-out infinite alternate;
 }
 
+body[data-theme="light"]::before {
+  background:
+    radial-gradient(circle at 20% 16%, rgba(15, 157, 104, 0.18), transparent 30rem),
+    radial-gradient(circle at 86% 28%, rgba(27, 115, 183, 0.16), transparent 32rem),
+    radial-gradient(circle at 42% 82%, rgba(184, 107, 22, 0.12), transparent 25rem),
+    linear-gradient(135deg, #f7f1e8 0%, #dfeade 48%, #f5f0e8 100%);
+}
+
 .motion-background {
   position: fixed;
   inset: 0;
@@ -60,7 +96,8 @@ body::before {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -93,6 +130,7 @@ button {
 
 .top-actions {
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .eyebrow,
@@ -126,6 +164,9 @@ h1 {
 
 h2 {
   font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 h3 {
@@ -145,6 +186,11 @@ h3 {
 
 .notice.visible {
   display: flex;
+}
+
+body[data-theme="light"] .notice {
+  color: #4f3300;
+  background: rgba(184, 107, 22, 0.12);
 }
 
 .icon-button,
@@ -225,19 +271,19 @@ h3 {
 }
 
 .weather-panel {
-  height: 620px;
+  min-height: 620px;
   padding: 30px;
   display: grid;
   grid-template-rows: auto 145px auto;
   gap: 22px;
-  background: linear-gradient(150deg, rgba(244, 240, 230, 0.98), rgba(218, 241, 224, 0.95));
-  color: var(--ink);
+  background: var(--weather-bg);
+  color: var(--weather-text);
 }
 
 .weather-panel .eyebrow,
 .weather-panel .metric-label,
 .weather-panel .summary {
-  color: #50635c;
+  color: var(--weather-muted);
 }
 
 .temperature-row {
@@ -272,9 +318,13 @@ h3 {
 .weather-metrics div {
   min-height: 78px;
   padding: 14px;
-  border: 1px solid rgba(12, 25, 21, 0.1);
+  border: 1px solid var(--metric-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--metric-bg);
+}
+
+.weather-metrics div.wide {
+  grid-column: 1 / -1;
 }
 
 .metric-label {
@@ -468,9 +518,15 @@ h3 {
 
 .map-panel {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   gap: 14px;
   height: 620px;
+}
+
+.map-panel.route-mode {
+  grid-column: 1 / -1;
+  height: auto;
+  min-height: 980px;
 }
 
 .map {
@@ -479,6 +535,10 @@ h3 {
   border-radius: 8px;
   overflow: hidden;
   background: #18251f;
+}
+
+.route-mode .map {
+  height: 640px;
 }
 
 .segmented {
@@ -516,7 +576,7 @@ h3 {
 .hour-card {
   min-height: 122px;
   padding: 16px 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--soft-panel);
   text-align: center;
 }
 
@@ -572,7 +632,7 @@ h3 {
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--soft-panel);
 }
 
 .data-row {
@@ -580,6 +640,24 @@ h3 {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 12px;
+}
+
+.data-button {
+  width: 100%;
+  grid-template-columns: 38px 1fr auto;
+  color: var(--text);
+  text-align: left;
+}
+
+.data-button:hover,
+.data-button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  background: rgba(86, 209, 143, 0.14);
+}
+
+.data-button .meta {
+  display: block;
 }
 
 .data-row strong {
@@ -609,35 +687,136 @@ h3 {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 20px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--soft-panel);
 }
 
-.marker-dot {
-  width: 24px;
-  height: 24px;
+.section-icon,
+.row-icon,
+.map-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+
+.row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(86, 209, 143, 0.14);
+  color: var(--accent);
+}
+
+.row-icon.large {
+  width: 52px;
+  height: 52px;
+}
+
+.section-icon svg,
+.row-icon svg,
+.map-marker svg {
+  width: 70%;
+  height: 70%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-marker {
+  width: 32px;
+  height: 32px;
   border: 3px solid #fff;
   border-radius: 50%;
+  color: #fff;
   background: var(--accent);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
-.marker-dot.user {
-  width: 30px;
-  height: 30px;
-  background: #ffffff;
-  border-color: var(--accent);
+.marker-user,
+.marker-home {
+  width: 38px;
+  height: 38px;
+  color: var(--accent);
+  background: #fff;
 }
 
-.marker-dot.restaurant {
+.marker-food,
+.marker-coffee,
+.marker-drink,
+.marker-sandwich,
+.marker-pin {
   background: var(--accent-2);
 }
 
-.marker-dot.bike {
-  background: #5bb0ff;
+.marker-bike {
+  background: var(--blue);
 }
 
-.marker-dot.scooter {
-  background: #dce666;
+.marker-scooter {
+  background: #7a8b1f;
+}
+
+.route-details {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft-panel);
+}
+
+.route-details[hidden] {
+  display: none;
+}
+
+.route-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.small {
+  min-height: 38px;
+  padding: 0 14px;
+}
+
+.route-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-steps li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft-panel);
+}
+
+.step-index {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  font-weight: 900;
 }
 
 .leaflet-container {
@@ -670,7 +849,8 @@ label {
   font-weight: 850;
 }
 
-input {
+input,
+select {
   width: 100%;
   border: 1px solid rgba(12, 25, 21, 0.18);
   border-radius: 8px;
@@ -700,6 +880,54 @@ input {
 .secondary {
   background: rgba(12, 25, 21, 0.1);
   color: var(--ink);
+}
+
+.permission-panel,
+.detail-body,
+.detail-hero,
+.detail-row {
+  display: grid;
+  gap: 12px;
+}
+
+.permission-panel {
+  padding: 16px;
+  border: 1px solid rgba(12, 25, 21, 0.12);
+  border-radius: 8px;
+  background: rgba(12, 25, 21, 0.06);
+}
+
+.detail-hero {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.detail-map-link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.detail-row {
+  grid-template-columns: minmax(130px, 0.36fr) 1fr;
+  padding: 12px;
+  border: 1px solid rgba(12, 25, 21, 0.12);
+  border-radius: 8px;
+  background: rgba(12, 25, 21, 0.05);
+}
+
+.detail-row span {
+  color: #50635c;
+  font-weight: 850;
+}
+
+.detail-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @keyframes gradientDrift {
@@ -776,6 +1004,10 @@ input {
   .map {
     min-height: 420px;
   }
+
+  .map-panel.route-mode {
+    min-height: 900px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -797,5 +1029,17 @@ input {
 
   .weather-metrics {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .data-button {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .data-button .primary-value {
+    grid-column: 2;
+  }
+
+  .route-mode .map {
+    height: 520px;
   }
 }

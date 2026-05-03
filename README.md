@@ -13,31 +13,36 @@ The page is intentionally safe for a public repo:
 
 - Current weather from Open-Meteo.
 - Animated weather/time-of-day scene and animated gradient background.
-- Current-location map with selectable OpenStreetMap/CARTO/OpenTopoMap styles.
-- Route estimates to McLean, Tysons, and Navy Yard via OSRM.
+- Current-location map that follows the page theme with dark/light CARTO tiles.
+- Route estimates to McLean, Tysons, and Navy Yard via OSRM, with clickable turn-by-turn route details.
 - Clarendon Station train arrivals via WMATA when a local API key is configured.
 - Nearby Capital Bikeshare stations via CityBikes.
-- Nearby Bird scooters via public GBFS.
-- Restaurants within 0.7 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass.
+- Nearby Lime scooters via Arlington's public GBFS feed.
+- Restaurants within 0.7 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass, with details for hours, phone, address, and website when OSM has them.
+- Auto light/dark mode based on sunrise and sunset, plus manual light/dark settings.
+- Page permission prompts for location, camera, microphone, notifications, persistent storage, fullscreen, and screen wake lock.
 - A kiosk-friendly portrait layout for a 1080x1920 display.
 
 ## Data Notes
 
 This dashboard does not use fallback sample values. If a live source is unavailable, rate-limited, lacks CORS support, or requires configuration, the card shows that state instead of made-up data.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the Hearth settings dialog so the device can still use live data feeds without committing a location to GitHub. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the Hearth settings dialog so the device can still use live data feeds without committing a location to GitHub. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
 
 ## Configure On The Hearth
 
 Open the dashboard, tap the gear button, and set:
 
 - Location label
+- Theme mode
 - Refresh interval
 - Mobility radius
 - Optional fallback latitude and longitude
 - Optional WMATA API key
 
 Those settings are stored in the Hearth browser's local storage, not in this public repository.
+
+Use the Permissions button to request browser-level kiosk permissions for this page. Android or Fully Kiosk may still require app-level permission settings outside this static page.
 
 For kiosk setup over ADB, the same device-only settings can be saved by opening a one-time URL with query parameters:
 
