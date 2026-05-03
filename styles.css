@@ -261,29 +261,31 @@ body[data-theme="light"] .map-panel {
 
 .weather-hero {
   position: relative;
-  min-height: clamp(200px, 26vh, 300px);
-  border-radius: var(--radius);
-  overflow: hidden;
-  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
 }
 
 .weather-hero .sky-scene {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
+  position: relative;
+  width: clamp(240px, 30vh, 340px);
+  height: clamp(240px, 30vh, 340px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
 }
 
 .weather-overlay {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 2;
-  height: 100%;
-  padding: clamp(18px, 2.2vh, 28px);
   display: grid;
   align-content: center;
-  justify-items: start;
-  gap: 6px;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 18px;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -395,14 +397,15 @@ body[data-theme="light"] .sun-times {
 
 .sun-times div {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   text-align: center;
 }
 
 .sun-times strong {
-  font-size: clamp(18px, 2.4vh, 24px);
+  font-size: clamp(16px, 2vh, 20px);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .weather-metrics {
@@ -425,7 +428,25 @@ body[data-theme="light"] .weather-metrics > div {
   background: rgba(20, 30, 26, 0.04);
 }
 
-.weather-metrics .wide { grid-column: span 3; }
+.weather-metrics .wide {
+  grid-column: span 3;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.weather-metrics .wide .metric-label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.weather-metrics .wide strong {
+  font-size: clamp(20px, 2.4vh, 26px);
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
 
 .metric-label {
   font-size: 11px;
@@ -1051,29 +1072,23 @@ input, select {
   font-weight: 700;
 }
 
-/* When the sky scene is the hero backdrop, scale up the decorations */
+/* Sky-scene decorations sized for the centered square */
 .weather-hero .sun {
-  width: clamp(70px, 9vh, 110px);
-  height: clamp(70px, 9vh, 110px);
-  left: clamp(36px, 5vw, 64px);
-  top: clamp(28px, 3.6vh, 48px);
+  width: 64px; height: 64px;
+  left: 26px; top: 26px;
+  box-shadow: 0 0 0 14px rgba(255, 214, 90, 0.22), 0 0 30px rgba(255, 214, 90, 0.7);
 }
 .weather-hero .moon {
-  width: clamp(60px, 8vh, 100px);
-  height: clamp(60px, 8vh, 100px);
-  left: clamp(36px, 5vw, 64px);
-  top: clamp(28px, 3.6vh, 48px);
+  width: 56px; height: 56px;
+  left: 28px; top: 28px;
 }
 .weather-hero .cloud-a {
-  width: clamp(140px, 18vw, 220px);
-  height: clamp(46px, 5vh, 64px);
-  right: clamp(40px, 6vw, 80px);
-  top: clamp(50px, 6.5vh, 90px);
+  width: 110px; height: 36px;
+  right: 22px; top: 38px;
 }
 .weather-hero .cloud-b {
-  width: clamp(110px, 14vw, 170px);
-  left: clamp(80px, 12vw, 160px);
-  top: clamp(80px, 10vh, 130px);
+  width: 80px; height: 26px;
+  right: auto; left: 24px; top: 78px;
 }
 
 /* Sky scene primitives (kept compact) -------------------------------- */
