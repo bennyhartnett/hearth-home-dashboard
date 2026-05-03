@@ -1134,6 +1134,49 @@ function scheduleRefresh() {
   }, settings.refreshMinutes * 60 * 1000);
 }
 
+function isMapInteractionTarget(target) {
+  return Boolean(target?.closest?.("#map, .leaflet-control, .leaflet-popup"));
+}
+
+function wirePageZoomGuards() {
+  const blockOutsideMap = (event) => {
+    if (event.cancelable && !isMapInteractionTarget(event.target)) event.preventDefault();
+  };
+
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    document.addEventListener(type, blockOutsideMap, { passive: false });
+  });
+
+  document.addEventListener("touchmove", (event) => {
+    if (event.cancelable && event.touches?.length > 1 && !isMapInteractionTarget(event.target)) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener("wheel", (event) => {
+    if (event.cancelable && event.ctrlKey && !isMapInteractionTarget(event.target)) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (event) => {
+    const now = Date.now();
+    if (event.cancelable && now - lastTouchEnd < 350 && !isMapInteractionTarget(event.target)) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  document.addEventListener("keydown", (event) => {
+    const zoomKey = ["+", "=", "-", "_", "0"].includes(event.key);
+    if ((event.ctrlKey || event.metaKey) && zoomKey && !isMapInteractionTarget(document.activeElement)) {
+      event.preventDefault();
+    }
+  });
+}
+
+wirePageZoomGuards();
 hydrateStaticIcons();
 applyTheme(settings.themeMode === "light" ? "light" : "dark");
 wireSettings();
