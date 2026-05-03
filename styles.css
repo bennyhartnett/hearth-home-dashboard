@@ -340,6 +340,17 @@ body[data-theme="light"] .summary { color: #11201a; }
   display: flex;
   align-items: flex-start;
   line-height: 0.88;
+  font-size: clamp(96px, 14vh, 168px);
+}
+
+.weather-overlay .temperature {
+  font-size: 1em;
+}
+
+.weather-overlay .degree {
+  font-size: 0.42em;
+  padding-top: 0.18em;
+  font-weight: 300;
 }
 
 .sky-scene {
