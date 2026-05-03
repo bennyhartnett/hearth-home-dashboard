@@ -7,7 +7,7 @@
     <title>Home Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2308110f'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <div class="motion-background" aria-hidden="true"></div>
@@ -32,127 +32,133 @@
         Requesting browser location. Live weather, maps, restaurants, mobility, and drive estimates start after location is available.
       </section>
 
-      <section class="hero-grid">
-        <article class="weather-panel">
-          <div class="weather-copy">
-            <p id="locationLabel" class="eyebrow">Current location</p>
-            <div class="temperature-row">
-              <span id="currentTemp" class="temperature">--</span>
-              <span class="degree">&deg;F</span>
-            </div>
-            <p id="weatherSummary" class="summary">Waiting for location</p>
-          </div>
-
-          <div id="skyScene" class="sky-scene day clear" aria-label="Animated weather scene">
-            <div class="stars"></div>
-            <div class="sun"></div>
-            <div class="moon"></div>
-            <div class="cloud cloud-a"></div>
-            <div class="cloud cloud-b"></div>
-            <div class="rain"></div>
-            <div class="snow"></div>
-            <div class="bolt"></div>
-          </div>
-
-          <div class="weather-metrics">
-            <div>
-              <span class="metric-label">Feels</span>
-              <strong id="feelsLike">--&deg;</strong>
-            </div>
-            <div>
-              <span class="metric-label">Humidity</span>
-              <strong id="humidity">--%</strong>
-            </div>
-            <div>
-              <span class="metric-label">Wind</span>
-              <strong id="wind">-- mph</strong>
-            </div>
-            <div>
-              <span class="metric-label">High / Low</span>
-              <strong id="highLow">-- / --</strong>
-            </div>
-            <div class="wide">
-              <span class="metric-label">Rain Next</span>
-              <strong id="rainSoon">--</strong>
-            </div>
-          </div>
-        </article>
-
-        <article class="map-panel">
-          <div class="section-header compact">
-            <div>
-              <h2><span class="section-icon" data-icon="map" aria-hidden="true"></span>Map</h2>
-              <p id="mapStatus">Waiting for location</p>
-            </div>
-          </div>
-          <div id="map" class="map"></div>
-          <section id="routeDetails" class="route-details" hidden>
-            <div class="route-head">
-              <div>
-                <p class="eyebrow">Selected route</p>
-                <h3 id="routeTitle">Route</h3>
-                <p id="routeSummary" class="muted"></p>
+      <section class="dashboard-shell">
+        <section class="sticky-region" aria-label="Pinned live view">
+          <section class="hero-grid">
+            <article class="weather-panel">
+              <div class="weather-copy">
+                <p id="locationLabel" class="eyebrow">Current location</p>
+                <div class="temperature-row">
+                  <span id="currentTemp" class="temperature">--</span>
+                  <span class="degree">&deg;F</span>
+                </div>
+                <p id="weatherSummary" class="summary">Waiting for location</p>
               </div>
-              <button id="clearRouteButton" class="secondary small" type="button">Clear</button>
-            </div>
-            <ol id="routeSteps" class="route-steps"></ol>
+
+              <div id="skyScene" class="sky-scene day clear" aria-label="Animated weather scene">
+                <div class="stars"></div>
+                <div class="sun"></div>
+                <div class="moon"></div>
+                <div class="cloud cloud-a"></div>
+                <div class="cloud cloud-b"></div>
+                <div class="rain"></div>
+                <div class="snow"></div>
+                <div class="bolt"></div>
+              </div>
+
+              <div class="weather-metrics">
+                <div>
+                  <span class="metric-label">Feels</span>
+                  <strong id="feelsLike">--&deg;</strong>
+                </div>
+                <div>
+                  <span class="metric-label">Humidity</span>
+                  <strong id="humidity">--%</strong>
+                </div>
+                <div>
+                  <span class="metric-label">Wind</span>
+                  <strong id="wind">-- mph</strong>
+                </div>
+                <div>
+                  <span class="metric-label">High / Low</span>
+                  <strong id="highLow">-- / --</strong>
+                </div>
+                <div class="wide">
+                  <span class="metric-label">Rain Next</span>
+                  <strong id="rainSoon">--</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="map-panel">
+              <div class="section-header compact">
+                <div>
+                  <h2><span class="section-icon" data-icon="map" aria-hidden="true"></span>Map</h2>
+                  <p id="mapStatus">Waiting for location</p>
+                </div>
+              </div>
+              <div id="map" class="map"></div>
+              <section id="routeDetails" class="route-details" hidden>
+                <div class="route-head">
+                  <div>
+                    <p class="eyebrow">Selected route</p>
+                    <h3 id="routeTitle">Route</h3>
+                    <p id="routeSummary" class="muted"></p>
+                  </div>
+                  <button id="clearRouteButton" class="secondary small" type="button">Clear</button>
+                </div>
+                <ol id="routeSteps" class="route-steps"></ol>
+              </section>
+            </article>
           </section>
-        </article>
+        </section>
+
+        <section class="scroll-region" aria-label="Scrollable dashboard data">
+          <section class="section-header">
+            <h2><span class="section-icon" data-icon="clock" aria-hidden="true"></span>Next Hours</h2>
+            <p id="updatedLine">Waiting for first refresh</p>
+          </section>
+          <section id="hourlyStrip" class="hourly-strip" aria-label="Hourly forecast"></section>
+
+          <section class="data-grid">
+            <article class="data-panel">
+              <div class="section-header compact">
+                <div>
+                  <h2><span class="section-icon" data-icon="car" aria-hidden="true"></span>Driving</h2>
+                  <p>Route estimates from current location</p>
+                </div>
+              </div>
+              <div id="driveList" class="stack-list"></div>
+            </article>
+
+            <article class="data-panel">
+              <div class="section-header compact">
+                <div>
+                  <h2><span class="section-icon" data-icon="train" aria-hidden="true"></span>Metro</h2>
+                  <p>Clarendon Station arrivals</p>
+                </div>
+              </div>
+              <div id="metroList" class="stack-list"></div>
+            </article>
+
+            <article class="data-panel">
+              <div class="section-header compact">
+                <div>
+                  <h2><span class="section-icon" data-icon="bike" aria-hidden="true"></span>Bikes & Scooters</h2>
+                  <p id="mobilityStatus">Waiting for location</p>
+                </div>
+              </div>
+              <div id="mobilityList" class="stack-list"></div>
+            </article>
+
+            <article class="data-panel">
+              <div class="section-header compact">
+                <div>
+                  <h2><span class="section-icon" data-icon="food" aria-hidden="true"></span>Open Nearby</h2>
+                  <p id="restaurantStatus">Restaurants within 0.7 miles</p>
+                </div>
+              </div>
+              <div id="restaurantList" class="stack-list"></div>
+            </article>
+          </section>
+
+          <section class="section-header">
+            <h2><span class="section-icon" data-icon="calendar" aria-hidden="true"></span>Forecast</h2>
+            <p>Next 5 days</p>
+          </section>
+          <section id="dailyList" class="daily-list" aria-label="Daily forecast"></section>
+        </section>
       </section>
-
-      <section class="section-header">
-        <h2><span class="section-icon" data-icon="clock" aria-hidden="true"></span>Next Hours</h2>
-        <p id="updatedLine">Waiting for first refresh</p>
-      </section>
-      <section id="hourlyStrip" class="hourly-strip" aria-label="Hourly forecast"></section>
-
-      <section class="data-grid">
-        <article class="data-panel">
-          <div class="section-header compact">
-            <div>
-              <h2><span class="section-icon" data-icon="car" aria-hidden="true"></span>Driving</h2>
-              <p>Route estimates from current location</p>
-            </div>
-          </div>
-          <div id="driveList" class="stack-list"></div>
-        </article>
-
-        <article class="data-panel">
-          <div class="section-header compact">
-            <div>
-              <h2><span class="section-icon" data-icon="train" aria-hidden="true"></span>Metro</h2>
-              <p>Clarendon Station arrivals</p>
-            </div>
-          </div>
-          <div id="metroList" class="stack-list"></div>
-        </article>
-
-        <article class="data-panel">
-          <div class="section-header compact">
-            <div>
-              <h2><span class="section-icon" data-icon="bike" aria-hidden="true"></span>Bikes & Scooters</h2>
-              <p id="mobilityStatus">Waiting for location</p>
-            </div>
-          </div>
-          <div id="mobilityList" class="stack-list"></div>
-        </article>
-
-        <article class="data-panel">
-          <div class="section-header compact">
-            <div>
-              <h2><span class="section-icon" data-icon="food" aria-hidden="true"></span>Open Nearby</h2>
-              <p id="restaurantStatus">Restaurants within 0.7 miles</p>
-            </div>
-          </div>
-          <div id="restaurantList" class="stack-list"></div>
-        </article>
-      </section>
-
-      <section class="section-header">
-        <h2><span class="section-icon" data-icon="calendar" aria-hidden="true"></span>Forecast</h2>
-        <p>Next 5 days</p>
-      </section>
-      <section id="dailyList" class="daily-list" aria-label="Daily forecast"></section>
     </main>
 
     <dialog id="settingsDialog" class="settings-dialog">
@@ -244,6 +250,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>
