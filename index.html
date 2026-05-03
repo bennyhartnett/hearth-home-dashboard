@@ -7,12 +7,9 @@
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306100c'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=12">
+    <link rel="stylesheet" href="styles.css?v=13">
   </head>
   <body>
-    <div id="map" class="map-background" aria-hidden="true"></div>
-    <div class="map-overlay" aria-hidden="true"></div>
-
     <main class="dashboard" aria-live="polite">
       <header class="top-row">
         <div class="time-date">
@@ -122,6 +119,8 @@
       </article>
 
       <section id="hourlyStrip" class="hourly-strip glass" aria-label="Hourly forecast"></section>
+
+      <section id="map" class="map-panel" aria-label="Neighborhood map"></section>
 
       <section class="cards-grid">
         <article class="card glass">
@@ -279,6 +278,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>
