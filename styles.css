@@ -334,14 +334,6 @@ body[data-theme="light"] .map-panel {
   margin-top: 2px;
 }
 
-body[data-theme="light"] .overlay-location {
-  color: rgba(17, 32, 26, 0.65);
-}
-
-body[data-theme="light"] .weather-overlay {
-  text-shadow: 0 1px 6px rgba(255, 255, 255, 0.55);
-}
-
 .eyebrow {
   font-size: 12px;
   font-weight: 700;
@@ -366,16 +358,12 @@ body[data-theme="light"] .weather-overlay {
   color: #fff;
 }
 
-body[data-theme="light"] .temperature { color: #11201a; }
-
 .degree {
   padding-top: 0.18em;
   font-size: 0.42em;
   font-weight: 300;
   color: rgba(255, 255, 255, 0.78);
 }
-
-body[data-theme="light"] .degree { color: rgba(17, 32, 26, 0.6); }
 
 .summary {
   font-size: clamp(20px, 2.4vh, 28px);
@@ -384,8 +372,6 @@ body[data-theme="light"] .degree { color: rgba(17, 32, 26, 0.6); }
   margin-top: 6px;
   opacity: 0.92;
 }
-
-body[data-theme="light"] .summary { color: #11201a; }
 
 .weather-overlay .temperature-row {
   display: flex;

@@ -27,7 +27,7 @@ const MAP_STYLES = {
     url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
   },
   light: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
   }
 };
 
@@ -64,6 +64,7 @@ const DEFAULT_PHOTO_URL = "./photo.png";
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
   themeMode: "auto",
+  mapTheme: "dark",
   refreshMinutes: 5,
   mobilityRadiusMiles: 2,
   wmataKey: "",
@@ -264,7 +265,6 @@ function applyTheme(theme) {
   activeTheme = theme === "light" ? "light" : "dark";
   document.body.dataset.theme = activeTheme;
   document.documentElement.style.colorScheme = activeTheme;
-  setMapStyle(activeTheme);
   updateThemeButton();
 }
 
@@ -429,13 +429,32 @@ function initMap() {
   window.addEventListener("resize", () => map?.invalidateSize());
 }
 
-function setMapStyle(key) {
+function setMapStyle() {
   if (!map) return;
-  const style = MAP_STYLES[key === "light" ? "light" : "dark"];
+  const key = settings.mapTheme === "light" ? "light" : "dark";
+  const style = MAP_STYLES[key];
   if (currentTileUrl === style.url && tileLayer) return;
   if (tileLayer) tileLayer.remove();
   tileLayer = L.tileLayer(style.url, { maxZoom: 19, attribution: "" }).addTo(map);
   currentTileUrl = style.url;
+  updateMapThemeButton();
+}
+
+function updateMapThemeButton() {
+  const button = $("mapThemeButton");
+  if (!button) return;
+  const mode = settings.mapTheme === "light" ? "light" : "dark";
+  const iconName = mode === "light" ? "sun" : "moon";
+  const icon = button.querySelector(".section-icon");
+  if (icon) icon.innerHTML = iconSvg(iconName);
+  button.setAttribute("aria-label", `Map: ${mode}`);
+  button.title = `Map: ${mode}`;
+}
+
+function cycleMapTheme() {
+  const next = settings.mapTheme === "light" ? "dark" : "light";
+  saveSettings({ ...settings, mapTheme: next });
+  setMapStyle();
 }
 
 function markerIcon(type) {
@@ -1238,6 +1257,7 @@ function wireSettings() {
   $("clearRouteButton").addEventListener("click", clearRoute);
   $("locateButton").addEventListener("click", () => requestLocation({ forceBrowser: true }));
   $("themeButton").addEventListener("click", cycleTheme);
+  $("mapThemeButton").addEventListener("click", cycleMapTheme);
 
   $("resetSettings").addEventListener("click", () => {
     saveSettings({ ...DEFAULT_SETTINGS });
