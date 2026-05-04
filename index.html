@@ -7,32 +7,27 @@
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306100c'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="stylesheet" href="styles.css?v=17">
   </head>
   <body>
     <main class="dashboard" aria-live="polite">
-      <header class="top-row">
-        <div class="time-date">
+      <section class="hero-row">
+        <div class="time-block">
           <h1 id="clock">--:--:--</h1>
           <p id="dateLine" class="date-line">Loading</p>
-        </div>
-        <div class="status-pills">
-          <div id="trashPill" class="pill pill-warn" hidden>
-            <span class="pill-dot" aria-hidden="true"></span>
-            <span>Trash day tomorrow</span>
+          <div class="status-pills">
+            <div id="trashPill" class="pill pill-warn" hidden>
+              <span class="pill-dot" aria-hidden="true"></span>
+              <span>Trash day tomorrow</span>
+            </div>
+            <div id="networkPill" class="pill">
+              <span id="networkDot" class="pill-dot" aria-hidden="true"></span>
+              <span id="networkLabel">Network</span>
+            </div>
           </div>
-          <div id="networkPill" class="pill">
-            <span id="networkDot" class="pill-dot" aria-hidden="true"></span>
-            <span id="networkLabel">Network</span>
-          </div>
         </div>
-      </header>
 
-      <section id="locationNotice" class="notice" hidden>
-        Requesting location.
-      </section>
-
-      <article class="weather-card glass">
+        <article class="weather-card glass">
         <p id="locationLabel" class="eyebrow">Current location</p>
 
         <div class="weather-hero">
@@ -97,6 +92,11 @@
           </div>
         </div>
       </article>
+      </section>
+
+      <section id="locationNotice" class="notice" hidden>
+        Requesting location.
+      </section>
 
       <section id="hourlyStrip" class="hourly-strip glass" aria-label="Hourly forecast"></section>
 
@@ -261,6 +261,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
   </body>
 </html>

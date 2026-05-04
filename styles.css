@@ -121,9 +121,8 @@ body[data-theme="light"] .map-panel {
   padding: clamp(20px, 2.2vh, 36px) clamp(20px, 2.2vw, 32px);
   display: grid;
   grid-template-rows:
-    auto              /* top row */
+    auto              /* hero row (time + weather) */
     auto              /* notice (collapses) */
-    auto              /* weather */
     auto              /* hourly */
     auto              /* map */
     minmax(0, 1fr)    /* cards grid */
@@ -160,17 +159,31 @@ body[data-theme="light"] .map-panel {
   }
 }
 
-/* Top row ------------------------------------------------------------ */
-.top-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+/* Hero row (time + weather, side by side) --------------------------- */
+.hero-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: clamp(14px, 2vw, 28px);
 }
 
-.time-date {
+.time-block {
   display: grid;
-  gap: 8px;
+  align-content: space-between;
+  gap: 18px;
+  padding: 8px 4px 8px 0;
+  min-width: 0;
+}
+
+.hero-row .weather-card {
+  width: clamp(360px, 46vw, 540px);
+}
+
+.status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 #clock {
@@ -200,13 +213,6 @@ body[data-theme="light"] .map-panel {
   font-weight: 500;
   color: var(--text-2);
   letter-spacing: -0.01em;
-}
-
-.status-pills {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
 }
 
 .pill {
