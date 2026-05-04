@@ -9,3 +9,4 @@ HEARTH_ADB_RUNBOOK.md
 *.apk
 *.zip
 *.png
+!photo.png

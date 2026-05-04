@@ -53,7 +53,7 @@ const METRO_LINE_NAMES = {
   SV: "Silver"
 };
 
-const DEFAULT_PHOTO_URL = "https://picsum.photos/seed/hearth-home/720/640";
+const DEFAULT_PHOTO_URL = "./photo.png";
 
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
