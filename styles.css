@@ -803,7 +803,7 @@ body[data-theme="light"] .daily-item {
 /* Floating action buttons (bottom right) ---------------------------- */
 .floating-actions {
   position: fixed;
-  right: clamp(14px, 1.5vw, 22px);
+  left: clamp(14px, 1.5vw, 22px);
   bottom: clamp(14px, 1.5vh, 22px);
   z-index: 50;
   display: flex;
