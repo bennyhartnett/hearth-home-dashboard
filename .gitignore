@@ -10,3 +10,5 @@ HEARTH_ADB_RUNBOOK.md
 *.zip
 *.png
 !photo.png
+!scenes/
+!scenes/*.png

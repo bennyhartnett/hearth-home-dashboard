@@ -407,6 +407,14 @@ body[data-theme="light"] .map-panel {
   background: linear-gradient(160deg, #6db5e8, #b9dfef);
 }
 
+.sky-scene.morning {
+  background: linear-gradient(160deg, #315d8e 0%, #f8b675 58%, #f1e7c7 100%);
+}
+
+.sky-scene.sunset {
+  background: linear-gradient(160deg, #1c3155 0%, #da713d 56%, #ffd18d 100%);
+}
+
 .sky-scene.night {
   background: linear-gradient(160deg, #0c1a32, #20355c);
 }
@@ -415,9 +423,25 @@ body[data-theme="light"] .map-panel {
   background: linear-gradient(180deg, #7da3bf, #c9d6df);
 }
 
+.sky-scene.morning.cloudy {
+  background: linear-gradient(160deg, #315d8e 0%, #f8b675 58%, #f1e7c7 100%);
+}
+
+.sky-scene.sunset.cloudy {
+  background: linear-gradient(160deg, #1c3155 0%, #da713d 56%, #ffd18d 100%);
+}
+
+.sky-scene.night.cloudy {
+  background: linear-gradient(160deg, #0c1a32, #20355c);
+}
+
 .sky-scene.rainy,
 .sky-scene.storm {
   background: linear-gradient(180deg, #4d627a, #94a8b9);
+}
+
+.sky-scene.snowy {
+  background: linear-gradient(180deg, #8fa9bc, #e9f1f7);
 }
 
 .sky-scene.foggy {
@@ -1152,6 +1176,17 @@ input, select {
 }
 .night .sun { display: none; }
 .night .moon { display: block; }
+.morning .sun {
+  left: 34px;
+  top: 64px;
+  background: #ffcf6a;
+}
+.sunset .sun {
+  left: 82px;
+  top: 70px;
+  background: #ff9858;
+  box-shadow: 0 0 0 14px rgba(255, 152, 88, 0.22), 0 0 30px rgba(255, 152, 88, 0.62);
+}
 .stars {
   display: none;
   inset: 0;

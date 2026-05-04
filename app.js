@@ -48,6 +48,26 @@ const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "hearth-dashboard-settings-v2";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
 const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
+const SCENE_PHOTOS = Object.freeze({
+  fog: "./scenes/fog_daniel.png",
+  snow: "./scenes/snow_daniel.png",
+  rain: "./scenes/rainy_daniel.png",
+  cloudy: "./scenes/cloudy_daniel.png",
+  night: "./scenes/night_daniel.png",
+  morning: "./scenes/dawn_daniel.png",
+  sunset: "./scenes/dusk_daniel.png",
+  noon: "./scenes/day_daniel.png"
+});
+const WEATHER_SCENE_BY_VISUAL = Object.freeze({
+  foggy: "fog",
+  rainy: "rain",
+  storm: "rain",
+  snowy: "snow"
+});
+const MORNING_BEFORE_SUNRISE_MINUTES = 45;
+const MORNING_AFTER_SUNRISE_MINUTES = 180;
+const SUNSET_BEFORE_MINUTES = 90;
+const SUNSET_AFTER_MINUTES = 120;
 
 const METRO_LINE_NAMES = {
   RD: "Red",
@@ -58,7 +78,7 @@ const METRO_LINE_NAMES = {
   SV: "Silver"
 };
 
-const DEFAULT_PHOTO_URL = "./photo.png";
+const DEFAULT_PHOTO_URL = SCENE_PHOTOS.noon;
 
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
@@ -85,6 +105,7 @@ let activeTheme = "dark";
 let wakeLock = null;
 let driveRoutes = new Map();
 let lastDailyData = null;
+let lastWeatherVisual = "clear";
 let userMarker = null;
 let lastUserLatLon = null;
 let mapCenteredOnce = false;
@@ -183,11 +204,18 @@ function hydrateStaticIcons() {
   });
 }
 
-function applyHeroPhoto() {
+function applyHeroPhoto(sceneUrl = DEFAULT_PHOTO_URL) {
   const img = $("heroPhoto");
   if (!img) return;
-  const url = (settings.photoUrl || DEFAULT_PHOTO_URL).trim();
+  const url = (settings.photoUrl || sceneUrl || DEFAULT_PHOTO_URL).trim();
   if (img.getAttribute("src") !== url) img.setAttribute("src", url);
+}
+
+function preloadScenePhotos() {
+  Object.values(SCENE_PHOTOS).forEach((url) => {
+    const img = new Image();
+    img.src = url;
+  });
 }
 
 function formatTimeWithSeconds(date) {
@@ -262,6 +290,70 @@ function weatherInfo(code) {
   return WEATHER_CODES[code] || ["Weather unavailable", "cloudy"];
 }
 
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60000);
+}
+
+function fallbackTimeBucket(now = new Date()) {
+  const hour = now.getHours();
+  if (hour >= 5 && hour < 10) return "morning";
+  if (hour >= 10 && hour < 17) return "noon";
+  if (hour >= 17 && hour < 21) return "sunset";
+  return "night";
+}
+
+function solarTimeBucket(daily, now = new Date()) {
+  const candidates = (daily?.sunrise || []).map((sunriseValue, index) => ({
+    sunrise: new Date(sunriseValue),
+    sunset: daily?.sunset?.[index] ? new Date(daily.sunset[index]) : null
+  })).filter(({ sunrise, sunset }) => (
+    sunset &&
+    !Number.isNaN(sunrise.getTime()) &&
+    !Number.isNaN(sunset.getTime())
+  ));
+
+  if (!candidates.length) {
+    return fallbackTimeBucket(now);
+  }
+
+  const candidate = candidates.find(({ sunset }) => (
+    now < addMinutes(sunset, SUNSET_AFTER_MINUTES)
+  )) || candidates[candidates.length - 1];
+  const { sunrise, sunset } = candidate;
+  const morningStart = addMinutes(sunrise, -MORNING_BEFORE_SUNRISE_MINUTES);
+  const morningEnd = addMinutes(sunrise, MORNING_AFTER_SUNRISE_MINUTES);
+  const sunsetStart = addMinutes(sunset, -SUNSET_BEFORE_MINUTES);
+  const sunsetEnd = addMinutes(sunset, SUNSET_AFTER_MINUTES);
+
+  if (now >= morningStart && now < morningEnd) return "morning";
+  if (now >= sunsetStart && now < sunsetEnd) return "sunset";
+  if (now >= morningEnd && now < sunsetStart) return "noon";
+  return "night";
+}
+
+function selectScenePhoto(visual, daily, now = new Date()) {
+  const timeBucket = solarTimeBucket(daily, now);
+  let photoKey = WEATHER_SCENE_BY_VISUAL[visual];
+
+  if (!photoKey) {
+    photoKey = visual === "cloudy" && timeBucket === "noon" ? "cloudy" : timeBucket;
+  }
+
+  return {
+    timeBucket,
+    photoKey,
+    photoUrl: SCENE_PHOTOS[photoKey] || DEFAULT_PHOTO_URL
+  };
+}
+
+function updateHeroScene(now = new Date()) {
+  const scene = selectScenePhoto(lastWeatherVisual, lastDailyData, now);
+  applyHeroPhoto(scene.photoUrl);
+
+  const skyScene = $("skyScene");
+  if (skyScene) skyScene.className = `sky-scene ${scene.timeBucket} ${lastWeatherVisual}`;
+}
+
 function applyTheme(theme) {
   activeTheme = theme === "light" ? "light" : "dark";
   document.body.dataset.theme = activeTheme;
@@ -326,6 +418,7 @@ function updateClock() {
 
   setText("dateLine", formatDate(now));
   updateTrashReminder(now);
+  updateHeroScene(now);
 }
 
 /* Trash reminder: visible Wednesdays (trash day tomorrow on Thursday). */
@@ -583,8 +676,7 @@ async function updateWeather(location) {
       "apparent_temperature",
       "weather_code",
       "wind_speed_10m",
-      "cloud_cover",
-      "is_day"
+      "cloud_cover"
     ].join(","),
     hourly: "temperature_2m,weather_code,precipitation_probability,precipitation",
     daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"
@@ -603,8 +695,8 @@ async function updateWeather(location) {
   const current = data.current || {};
   const [summary, visual] = weatherInfo(current.weather_code);
   const daily = data.daily || {};
-  const isDay = current.is_day !== 0;
   lastDailyData = daily;
+  lastWeatherVisual = visual;
 
   setText("currentTemp", round(current.temperature_2m));
   setText("weatherSummary", summary);
@@ -641,7 +733,7 @@ async function updateWeather(location) {
   }
 
   applyThemeFromSun(daily);
-  $("skyScene").className = `sky-scene ${isDay ? "day" : "night"} ${visual}`;
+  updateHeroScene(now);
   renderHourly(data.hourly || {});
   renderDaily(daily);
 }
@@ -1401,6 +1493,7 @@ acquireWakeLock();
 
 wirePageZoomGuards();
 hydrateStaticIcons();
+preloadScenePhotos();
 applyHeroPhoto();
 applyTheme(settings.themeMode === "light" ? "light" : "dark");
 wireSettings();
