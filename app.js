@@ -31,15 +31,23 @@ const MAP_STYLES = {
   }
 };
 
+const OLD_DOMINION_TOLL_FREE_VIA = [{ lat: 38.9200, lon: -77.1590 }];
+const US_50_NUTLEY_TOLL_FREE_VIA = [{ lat: 38.8560, lon: -77.2590 }];
+const DULLES_TOLL_FREE_VIA = [
+  ...US_50_NUTLEY_TOLL_FREE_VIA,
+  { lat: 38.9000, lon: -77.4300 }
+];
+const TOLL_ROAD_PATTERN = /\b(?:Dulles Toll Road|Express Lanes|Custis Memorial Parkway)\b/i;
+
 const DESTINATIONS = [
-  { name: "Hartnett House @ McLean", lat: 38.9276291, lon: -77.1972357 },
-  { name: "Buckman Bungalow @ McLean", lat: 38.9275770, lon: -77.1755450 },
-  { name: "Petro Palace @ McLean", lat: 38.9299095, lon: -77.1719104 },
+  { name: "Hartnett House @ McLean", lat: 38.9276291, lon: -77.1972357, tollFreeVia: OLD_DOMINION_TOLL_FREE_VIA },
+  { name: "Buckman Bungalow @ McLean", lat: 38.9275770, lon: -77.1755450, tollFreeVia: OLD_DOMINION_TOLL_FREE_VIA },
+  { name: "Petro Palace @ McLean", lat: 38.9299095, lon: -77.1719104, tollFreeVia: OLD_DOMINION_TOLL_FREE_VIA },
   { name: "Landon Land @ Ballston", lat: 38.8808611, lon: -77.1118289 },
   { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 },
   { name: "DCA Airport", lat: 38.8512895, lon: -77.0396889 },
-  { name: "Dulles Airport", lat: 38.9522663, lon: -77.4534849 },
-  { name: "Mountain House @ Luray", lat: 38.6749668, lon: -78.5298515 }
+  { name: "Dulles Airport", lat: 38.9522663, lon: -77.4534849, tollFreeVia: DULLES_TOLL_FREE_VIA },
+  { name: "Mountain House @ Luray", lat: 38.6749668, lon: -78.5298515, tollFreeVia: US_50_NUTLEY_TOLL_FREE_VIA }
 ];
 
 const CLARENDON_STATION_CODE = "K02";
@@ -56,13 +64,25 @@ const SCENE_PHOTOS = Object.freeze({
   night: "./scenes/night_daniel.png",
   morning: "./scenes/dawn_daniel.png",
   sunset: "./scenes/dusk_daniel.png",
-  noon: "./scenes/day_daniel.png"
+  noon: "./scenes/day_daniel.png",
+  nightVision: "./scenes/nv_daniel.png",
+  thermal: "./scenes/thermal_daniel.png",
+  electro: "./scenes/electro_daniel.png",
+  threeD: "./scenes/3d_daniel.png",
+  radar: "./scenes/radar_daniel.png"
 });
 const WEATHER_SCENE_BY_VISUAL = Object.freeze({
   foggy: "fog",
   rainy: "rain",
   storm: "rain",
   snowy: "snow"
+});
+const OVERNIGHT_SCENE_BY_HOUR = Object.freeze({
+  0: "nightVision",
+  1: "thermal",
+  2: "electro",
+  3: "threeD",
+  4: "radar"
 });
 const MORNING_BEFORE_SUNRISE_MINUTES = 45;
 const MORNING_AFTER_SUNRISE_MINUTES = 180;
@@ -333,7 +353,7 @@ function solarTimeBucket(daily, now = new Date()) {
 
 function selectScenePhoto(visual, daily, now = new Date()) {
   const timeBucket = solarTimeBucket(daily, now);
-  let photoKey = WEATHER_SCENE_BY_VISUAL[visual];
+  let photoKey = OVERNIGHT_SCENE_BY_HOUR[now.getHours()] || WEATHER_SCENE_BY_VISUAL[visual];
 
   if (!photoKey) {
     photoKey = visual === "cloudy" && timeBucket === "noon" ? "cloudy" : timeBucket;
@@ -459,6 +479,13 @@ function hideNotice() {
 function setEmpty(containerId, message) {
   const container = $(containerId);
   if (container) container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+}
+
+function setLocationRequiredState() {
+  setText("weatherSummary", "Location required");
+  setEmpty("driveList", "Location required for drive estimates.");
+  setEmpty("mobilityList", "Location required for nearby bikes and scooters.");
+  setEmpty("restaurantList", "Location required for open restaurants.");
 }
 
 function dataRow(title, meta, value, leadingHtml = "") {
@@ -623,8 +650,9 @@ function requestLocation(options = {}) {
   if (!forceBrowser && useFallbackLocation("Using saved location.", true)) return;
 
   if (!navigator.geolocation) {
-    if (useFallbackLocation("No geolocation. Using saved location.")) return;
-    showNotice("Add fallback coordinates in settings to load local data.");
+    if (useFallbackLocation("Using saved location.", true)) return;
+    hideNotice();
+    setLocationRequiredState();
     return;
   }
 
@@ -642,13 +670,10 @@ function requestLocation(options = {}) {
       updateUserMarker(currentLocation);
       refreshAll();
     },
-    (error) => {
-      if (useFallbackLocation(`Location unavailable: ${error.message}.`)) return;
-      showNotice(`Location unavailable: ${error.message}.`);
-      setText("weatherSummary", "Location required");
-      setEmpty("driveList", "Location required for drive estimates.");
-      setEmpty("mobilityList", "Location required for nearby bikes and scooters.");
-      setEmpty("restaurantList", "Location required for open restaurants.");
+    () => {
+      if (useFallbackLocation("Using saved location.", true)) return;
+      hideNotice();
+      setLocationRequiredState();
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 120000 }
   );
@@ -816,18 +841,55 @@ function renderDaily(daily) {
 }
 
 /* Driving ----------------------------------------------------------- */
+function osrmPoint(point) {
+  return `${point.lon},${point.lat}`;
+}
+
+function tollFreeRoutePoints(location, destination) {
+  return [location, ...(destination.tollFreeVia || []), destination];
+}
+
+function osrmRouteUrl(points) {
+  const params = new URLSearchParams({
+    overview: "full",
+    geometries: "geojson",
+    steps: "true"
+  });
+  if (points.length > 2) params.set("waypoints", `0;${points.length - 1}`);
+  return `https://router.project-osrm.org/route/v1/driving/${points.map(osrmPoint).join(";")}?${params.toString()}`;
+}
+
+function routeStepText(route) {
+  return (route.legs || [])
+    .flatMap((leg) => leg.steps || [])
+    .map((step) => `${step.ref || ""} ${step.name || ""}`)
+    .join(" ");
+}
+
+function routeUsesKnownTolls(route) {
+  return TOLL_ROAD_PATTERN.test(routeStepText(route));
+}
+
+async function fetchTollFreeRoute(location, destination) {
+  const response = await fetch(osrmRouteUrl(tollFreeRoutePoints(location, destination)));
+  if (!response.ok) throw new Error(`${destination.name}: ${response.status}`);
+  const data = await response.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) throw new Error(`${destination.name}: ${data.message || data.code}`);
+
+  const route = data.routes[0];
+  if (routeUsesKnownTolls(route)) {
+    throw new Error(`${destination.name}: toll-free route unavailable`);
+  }
+  return route;
+}
+
 async function updateDriveTimes(location) {
   const container = $("driveList");
   container.innerHTML = "";
   driveRoutes = new Map();
 
   const rows = await Promise.all(DESTINATIONS.map(async (destination) => {
-    const url = `https://router.project-osrm.org/route/v1/driving/${location.lon},${location.lat};${destination.lon},${destination.lat}?overview=full&geometries=geojson&steps=true`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`${destination.name}: ${response.status}`);
-    const data = await response.json();
-    if (data.code !== "Ok" || !data.routes?.[0]) throw new Error(`${destination.name}: ${data.message || data.code}`);
-    const route = data.routes[0];
+    const route = await fetchTollFreeRoute(location, destination);
     const row = {
       name: destination.name,
       destination,
@@ -845,7 +907,7 @@ async function updateDriveTimes(location) {
   rows.forEach((row) => {
     container.append(createDataButton(
       row.name,
-      formatMiles(row.miles),
+      `Toll-free · ${formatMiles(row.miles)}`,
       formatMinutes(row.minutes),
       "car",
       () => showRoute(row.name)
@@ -878,7 +940,7 @@ function showRoute(name) {
 
   $("routeDetails").hidden = false;
   $("routeTitle").textContent = row.name;
-  $("routeSummary").textContent = `${formatDuration(row.route.duration)} · ${formatMiles(miles(row.route.distance))}`;
+  $("routeSummary").textContent = `Toll-free · ${formatDuration(row.route.duration)} · ${formatMiles(miles(row.route.distance))}`;
   renderRouteSteps(row.steps);
 
   setTimeout(() => {

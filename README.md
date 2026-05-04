@@ -13,8 +13,9 @@ The page is intentionally safe for a public repo:
 
 - Current weather from Open-Meteo.
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
+- Overnight specialty photo cycle from midnight through 5 AM.
 - Current-location map that follows the page theme with dark/light CARTO tiles.
-- Route estimates to McLean, Tysons, and Navy Yard via OSRM, with clickable turn-by-turn route details.
+- Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
 - Clarendon Station train arrivals via WMATA when a local API key is configured.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
