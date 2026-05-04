@@ -377,6 +377,11 @@ function weatherInfo(code) {
   return WEATHER_CODES[code] || ["Weather unavailable", "cloudy"];
 }
 
+function weatherGlyphVisual(visual, time, daily = lastDailyData) {
+  if (visual !== "clear") return visual;
+  return solarTimeBucket(daily, new Date(time)) === "night" ? "clear-night" : visual;
+}
+
 function addMinutes(date, minutes) {
   return new Date(date.getTime() + minutes * 60000);
 }
@@ -930,11 +935,12 @@ function renderHourly(hourly) {
   nextHours.forEach((time, offset) => {
     const index = startIndex + offset;
     const [, visual] = weatherInfo(hourly.weather_code?.[index]);
+    const glyphVisual = weatherGlyphVisual(visual, time);
     const article = document.createElement("article");
     article.className = "hour-card";
     article.innerHTML = `
       <p>${new Intl.DateTimeFormat([], { hour: "numeric" }).format(new Date(time))}</p>
-      <span class="hour-glyph ${visual}" aria-hidden="true"></span>
+      <span class="hour-glyph ${glyphVisual}" aria-hidden="true"></span>
       <strong>${round(hourly.temperature_2m?.[index])}°</strong>
     `;
     container.append(article);

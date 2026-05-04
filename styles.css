@@ -625,6 +625,7 @@ body[data-theme="light"] .hour-card {
   color: var(--accent-2);
 }
 .hour-glyph.clear { -webkit-mask-image: var(--icon-sun); mask-image: var(--icon-sun); }
+.hour-glyph.clear-night { -webkit-mask-image: var(--icon-moon); mask-image: var(--icon-moon); color: var(--text-2); }
 .hour-glyph.cloudy { -webkit-mask-image: var(--icon-cloud); mask-image: var(--icon-cloud); color: var(--text-2); }
 .hour-glyph.rainy { -webkit-mask-image: var(--icon-rain); mask-image: var(--icon-rain); color: var(--blue); }
 .hour-glyph.storm { -webkit-mask-image: var(--icon-bolt); mask-image: var(--icon-bolt); color: var(--accent-2); }
@@ -633,6 +634,7 @@ body[data-theme="light"] .hour-card {
 
 :root {
   --icon-sun: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='5'/><g><rect x='11' y='1' width='2' height='4' rx='1'/><rect x='11' y='19' width='2' height='4' rx='1'/><rect x='1' y='11' width='4' height='2' rx='1'/><rect x='19' y='11' width='4' height='2' rx='1'/><rect x='3.5' y='3.5' width='2' height='4' rx='1' transform='rotate(-45 4.5 5.5)'/><rect x='18.5' y='3.5' width='2' height='4' rx='1' transform='rotate(45 19.5 5.5)'/><rect x='3.5' y='16.5' width='2' height='4' rx='1' transform='rotate(45 4.5 18.5)'/><rect x='18.5' y='16.5' width='2' height='4' rx='1' transform='rotate(-45 19.5 18.5)'/></g></svg>");
+  --icon-moon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M20.5 14.5A8 8 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z'/></svg>");
   --icon-cloud: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M7 18h11a4 4 0 0 0 .8-7.92A6 6 0 0 0 7 9a4.5 4.5 0 0 0 0 9z'/></svg>");
   --icon-rain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M7 14h11a4 4 0 0 0 .8-7.92A6 6 0 0 0 7 5a4.5 4.5 0 0 0 0 9z'/><path d='M9 17.5l-1.2 2.5M13 17.5l-1.2 2.5M17 17.5l-1.2 2.5'/><g><circle cx='8' cy='20' r='1'/><circle cx='12' cy='21' r='1'/><circle cx='16' cy='20' r='1'/></g></svg>");
   --icon-bolt: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M7 14h11a4 4 0 0 0 .8-7.92A6 6 0 0 0 7 5a4.5 4.5 0 0 0 0 9z'/><path d='M12 15l-2 4h2l-1 4 4-5h-2l1-3z'/></svg>");
