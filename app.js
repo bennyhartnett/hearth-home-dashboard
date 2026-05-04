@@ -315,8 +315,8 @@ function updateClock() {
   const clockEl = $("clock");
   if (clockEl) {
     clockEl.innerHTML =
-      `<span class="clock-main">${escapeHtml(time)}</span>` +
-      `<span class="clock-tail">:${escapeHtml(sec)}${period ? ` ${escapeHtml(period)}` : ""}</span>`;
+      `<span class="clock-main">${escapeHtml(time)}:${escapeHtml(sec)}</span>` +
+      (period ? `<span class="clock-tail">${escapeHtml(period)}</span>` : "");
   }
 
   setText("dateLine", formatDate(now));
@@ -343,18 +343,10 @@ function updateNetworkStatus() {
   }
 
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if (conn) {
-    const type = conn.effectiveType || conn.type;
-    const downlink = Number.isFinite(conn.downlink) ? conn.downlink : null;
-    const isSlow = type === "slow-2g" || type === "2g";
-    dot.className = `pill-dot${isSlow ? " warn" : ""}`;
-    if (downlink) label.textContent = `Online · ${downlink} Mbps`;
-    else if (type) label.textContent = `Online · ${type.toUpperCase()}`;
-    else label.textContent = "Online";
-  } else {
-    dot.className = "pill-dot";
-    label.textContent = "Online";
-  }
+  const type = conn?.effectiveType || conn?.type || "";
+  const isSlow = type === "slow-2g" || type === "2g";
+  dot.className = `pill-dot${isSlow ? " warn" : ""}`;
+  label.textContent = "Online";
 }
 
 function showNotice(message) {
