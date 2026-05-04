@@ -32,9 +32,13 @@ const MAP_STYLES = {
 };
 
 const DESTINATIONS = [
-  { name: "McLean", lat: 38.9343, lon: -77.1775 },
-  { name: "Tysons", lat: 38.9187, lon: -77.2311 },
-  { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 }
+  { name: "Hartnett House @ McLean", lat: 38.9276291, lon: -77.1972357 },
+  { name: "Buckman Bungalow @ McLean", lat: 38.9275770, lon: -77.1755450 },
+  { name: "Petro Palace @ McLean", lat: 38.9299095, lon: -77.1719104 },
+  { name: "Landon Land @ Ballston", lat: 38.8808611, lon: -77.1118289 },
+  { name: "Tysons Corner Mall", lat: 38.9169789, lon: -77.2231140 },
+  { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 },
+  { name: "Mountain House @ Luray", lat: 38.6749668, lon: -78.5298515 }
 ];
 
 const CLARENDON_STATION_CODE = "K02";
