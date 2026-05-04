@@ -325,21 +325,18 @@ function updateTrashReminder(now) {
 
 /* Network status pill ------------------------------------------------ */
 function updateNetworkStatus() {
+  const pill = $("networkPill");
   const dot = $("networkDot");
   const label = $("networkLabel");
-  if (!dot || !label) return;
+  if (!pill || !dot || !label) return;
 
   if (!navigator.onLine) {
     dot.className = "pill-dot offline";
     label.textContent = "Offline";
-    return;
+    pill.hidden = false;
+  } else {
+    pill.hidden = true;
   }
-
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const type = conn?.effectiveType || conn?.type || "";
-  const isSlow = type === "slow-2g" || type === "2g";
-  dot.className = `pill-dot${isSlow ? " warn" : ""}`;
-  label.textContent = "Online";
 }
 
 function showNotice(message) {

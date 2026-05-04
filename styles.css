@@ -379,7 +379,7 @@ body[data-theme="light"] .summary { color: #11201a; }
   justify-content: center;
   align-items: flex-start;
   line-height: 0.9;
-  font-size: clamp(72px, 11vh, 124px);
+  font-size: clamp(96px, 14vh, 156px);
 }
 
 .weather-overlay .temperature {
@@ -595,7 +595,7 @@ body[data-theme="light"] .hour-card {
 .card-header h2 {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 20px;
   font-size: clamp(18px, 2.4vh, 22px);
   font-weight: 700;
   letter-spacing: -0.02em;
