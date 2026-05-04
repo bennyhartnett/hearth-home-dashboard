@@ -302,21 +302,14 @@ function applyThemeFromSun(daily) {
 
 function updateClock() {
   const now = new Date();
-  const hourMin = new Intl.DateTimeFormat([], {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true
-  }).format(now);
+  let hour = now.getHours() % 12;
+  if (hour === 0) hour = 12;
+  const min = String(now.getMinutes()).padStart(2, "0");
   const sec = String(now.getSeconds()).padStart(2, "0");
-  const lastSpace = hourMin.lastIndexOf(" ");
-  const time = lastSpace > -1 ? hourMin.slice(0, lastSpace) : hourMin;
-  const period = lastSpace > -1 ? hourMin.slice(lastSpace + 1) : "";
 
   const clockEl = $("clock");
   if (clockEl) {
-    clockEl.innerHTML =
-      `<span class="clock-main">${escapeHtml(time)}:${escapeHtml(sec)}</span>` +
-      (period ? `<span class="clock-tail">${escapeHtml(period)}</span>` : "");
+    clockEl.textContent = `${hour}:${min}:${sec}`;
   }
 
   setText("dateLine", formatDate(now));
