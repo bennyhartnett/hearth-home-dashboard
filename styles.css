@@ -309,17 +309,21 @@ body[data-theme="light"] .map-panel {
 
 .weather-overlay {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   text-align: center;
-  padding: 12px;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+  width: max-content;
+  max-width: 90%;
 }
+
+.weather-overlay > * { margin: 0; }
 
 body[data-theme="light"] .weather-overlay {
   text-shadow: 0 1px 6px rgba(255, 255, 255, 0.55);
@@ -374,7 +378,7 @@ body[data-theme="light"] .summary { color: #11201a; }
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  line-height: 1;
+  line-height: 0.9;
   font-size: clamp(72px, 11vh, 124px);
 }
 
