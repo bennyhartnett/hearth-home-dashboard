@@ -169,11 +169,36 @@ body[data-theme="light"] .map-panel {
 
 .time-block {
   display: grid;
-  align-content: space-between;
-  gap: 18px;
-  padding: 8px 4px 8px 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 6px 4px 6px 0;
   min-width: 0;
 }
+
+.time-stack {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+.hero-photo {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 120px;
+  background: linear-gradient(160deg, rgba(92, 240, 155, 0.15), rgba(103, 184, 255, 0.12));
+}
+
+.hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 0;
+}
+
+.hero-photo img:not([src]),
+.hero-photo img[src=""] { display: none; }
 
 .hero-row .weather-card {
   width: clamp(360px, 46vw, 540px);

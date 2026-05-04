@@ -53,6 +53,8 @@ const METRO_LINE_NAMES = {
   SV: "Silver"
 };
 
+const DEFAULT_PHOTO_URL = "https://picsum.photos/seed/hearth-home/720/640";
+
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
   themeMode: "auto",
@@ -60,7 +62,8 @@ const DEFAULT_SETTINGS = {
   mobilityRadiusMiles: 2,
   wmataKey: "",
   fallbackLat: "",
-  fallbackLon: ""
+  fallbackLon: "",
+  photoUrl: ""
 };
 
 let settings = loadSettings();
@@ -108,7 +111,8 @@ function applySettingsFromUrl() {
     "mobilityRadiusMiles",
     "fallbackLat",
     "fallbackLon",
-    "wmataKey"
+    "wmataKey",
+    "photoUrl"
   ];
 
   allowedKeys.forEach((key) => {
@@ -169,6 +173,13 @@ function hydrateStaticIcons() {
   document.querySelectorAll(".section-icon[data-icon]").forEach((element) => {
     element.innerHTML = iconSvg(element.dataset.icon);
   });
+}
+
+function applyHeroPhoto() {
+  const img = $("heroPhoto");
+  if (!img) return;
+  const url = (settings.photoUrl || DEFAULT_PHOTO_URL).trim();
+  if (img.getAttribute("src") !== url) img.setAttribute("src", url);
 }
 
 function formatTimeWithSeconds(date) {
@@ -1212,6 +1223,7 @@ function fillSettingsForm() {
   $("settingFallbackLat").value = settings.fallbackLat || "";
   $("settingFallbackLon").value = settings.fallbackLon || "";
   $("settingWmataKey").value = settings.wmataKey || "";
+  $("settingPhotoUrl").value = settings.photoUrl || "";
 }
 
 function wireSettings() {
@@ -1251,10 +1263,12 @@ function wireSettings() {
       mobilityRadiusMiles: Math.max(0.1, Number($("settingMobilityRadius").value) || 1),
       fallbackLat: $("settingFallbackLat").value.trim(),
       fallbackLon: $("settingFallbackLon").value.trim(),
-      wmataKey: $("settingWmataKey").value.trim()
+      wmataKey: $("settingWmataKey").value.trim(),
+      photoUrl: $("settingPhotoUrl").value.trim()
     });
     $("settingsDialog").close();
     scheduleRefresh();
+    applyHeroPhoto();
     if (settings.themeMode === "light" || settings.themeMode === "dark") applyTheme(settings.themeMode);
     initializeLocation();
   });
@@ -1329,6 +1343,7 @@ if (navigator.connection?.addEventListener) {
 
 wirePageZoomGuards();
 hydrateStaticIcons();
+applyHeroPhoto();
 applyTheme(settings.themeMode === "light" ? "light" : "dark");
 wireSettings();
 updateClock();
