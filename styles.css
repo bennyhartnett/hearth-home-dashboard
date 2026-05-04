@@ -124,9 +124,9 @@ body[data-theme="light"] .map-panel {
     auto              /* hero row (time + weather) */
     auto              /* notice (collapses) */
     auto              /* hourly */
+    auto              /* daily */
     auto              /* map */
-    minmax(0, 1fr)    /* cards grid */
-    auto;             /* daily */
+    minmax(0, 1fr);   /* cards grid */
   gap: clamp(10px, 1.4vh, 18px);
   overflow: hidden;
 }

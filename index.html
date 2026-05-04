@@ -7,7 +7,7 @@
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306100c'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=30">
+    <link rel="stylesheet" href="styles.css?v=31">
   </head>
   <body>
     <main class="dashboard" aria-live="polite">
@@ -104,6 +104,14 @@
 
       <section id="hourlyStrip" class="hourly-strip glass" aria-label="Hourly forecast"></section>
 
+      <section class="daily-card glass" aria-label="5-day forecast">
+        <header class="card-header">
+          <h2><span class="section-icon" data-icon="calendar" aria-hidden="true"></span>5-Day Forecast</h2>
+          <p id="updatedLine" class="muted">Updating</p>
+        </header>
+        <section id="dailyList" class="daily-list"></section>
+      </section>
+
       <section id="map" class="map-panel" aria-label="Neighborhood map"></section>
 
       <section class="cards-grid">
@@ -142,14 +150,6 @@
             <div id="mobilityList" class="stack-list"></div>
           </article>
         </div>
-      </section>
-
-      <section class="daily-card glass" aria-label="5-day forecast">
-        <header class="card-header">
-          <h2><span class="section-icon" data-icon="calendar" aria-hidden="true"></span>5-Day Forecast</h2>
-          <p id="updatedLine" class="muted">Updating</p>
-        </header>
-        <section id="dailyList" class="daily-list"></section>
       </section>
 
       <section id="routeDetails" class="route-details glass" hidden>
@@ -274,6 +274,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=30"></script>
+    <script src="app.js?v=31"></script>
   </body>
 </html>
