@@ -38,6 +38,8 @@ const DESTINATIONS = [
   { name: "Landon Land @ Ballston", lat: 38.8808611, lon: -77.1118289 },
   { name: "Tysons Corner Mall", lat: 38.9169789, lon: -77.2231140 },
   { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 },
+  { name: "DCA Airport", lat: 38.8512895, lon: -77.0396889 },
+  { name: "Dulles Airport", lat: 38.9522663, lon: -77.4534849 },
   { name: "Mountain House @ Luray", lat: 38.6749668, lon: -78.5298515 }
 ];
 
@@ -222,6 +224,10 @@ function formatMiles(value) {
 
 function formatDuration(seconds) {
   const minutes = Math.max(1, Math.round(seconds / 60));
+  return formatMinutes(minutes);
+}
+
+function formatMinutes(minutes) {
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
@@ -708,11 +714,13 @@ async function updateDriveTimes(location) {
     return row;
   }));
 
+  rows.sort((a, b) => a.minutes - b.minutes);
+
   rows.forEach((row) => {
     container.append(createDataButton(
       row.name,
       formatMiles(row.miles),
-      `${row.minutes} min`,
+      formatMinutes(row.minutes),
       "car",
       () => showRoute(row.name)
     ));
