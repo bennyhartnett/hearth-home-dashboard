@@ -34,7 +34,7 @@ const MAP_STYLES = {
 const DESTINATIONS = [
   { name: "McLean", lat: 38.9343, lon: -77.1775 },
   { name: "Tysons", lat: 38.9187, lon: -77.2311 },
-  { name: "Navy Yard", lat: 38.8766, lon: -77.0051 }
+  { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 }
 ];
 
 const CLARENDON_STATION_CODE = "K02";
