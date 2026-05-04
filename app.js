@@ -36,7 +36,6 @@ const DESTINATIONS = [
   { name: "Buckman Bungalow @ McLean", lat: 38.9275770, lon: -77.1755450 },
   { name: "Petro Palace @ McLean", lat: 38.9299095, lon: -77.1719104 },
   { name: "Landon Land @ Ballston", lat: 38.8808611, lon: -77.1118289 },
-  { name: "Tysons Corner Mall", lat: 38.9169789, lon: -77.2231140 },
   { name: "WC Smith @ Navy Yard", lat: 38.8801779, lon: -77.0052196 },
   { name: "DCA Airport", lat: 38.8512895, lon: -77.0396889 },
   { name: "Dulles Airport", lat: 38.9522663, lon: -77.4534849 },

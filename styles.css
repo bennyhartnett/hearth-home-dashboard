@@ -586,7 +586,7 @@ body[data-theme="light"] .hour-card {
 .cards-column {
   display: flex;
   flex-direction: column;
-  gap: clamp(10px, 1.4vh, 14px);
+  gap: clamp(18px, 2.4vh, 28px);
   min-height: 0;
   min-width: 0;
 }
