@@ -53,3 +53,7 @@ https://bennyhartnett.github.io/hearth-home-dashboard/?saveLocalSettings=1&locat
 ```
 
 The page saves the allowed settings locally, then strips those parameters from the address bar. Use real coordinates only on the private Hearth device, not in commits.
+
+## Deploy Notes
+
+After the page has loaded this release once, it checks the deployed dashboard every minute and automatically reloads when the `app.js` version in `index.html` changes. Bump the `app.js?v=...` query string in `index.html` for each dashboard deploy so the Hearth display picks up the new build without a manual refresh.

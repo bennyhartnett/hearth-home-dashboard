@@ -56,6 +56,7 @@ const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "hearth-dashboard-settings-v2";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
 const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
+const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -1373,6 +1374,49 @@ async function requestPagePermissions() {
 }
 
 /* Refresh ------------------------------------------------------------ */
+function appVersionFromDocument(documentRoot = document) {
+  const script = documentRoot.querySelector('script[src*="app.js"]');
+  if (!script) return "";
+  const src = script.getAttribute("src") || "";
+  try {
+    const url = new URL(src, window.location.href);
+    return url.searchParams.get("v") || url.pathname;
+  } catch {
+    return src;
+  }
+}
+
+async function deployedAppVersion() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("hearthUpdateCheck", String(Date.now()));
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  if (!response.ok) return "";
+  const html = await response.text();
+  const nextDocument = new DOMParser().parseFromString(html, "text/html");
+  return appVersionFromDocument(nextDocument);
+}
+
+async function checkForDashboardUpdate() {
+  if (!navigator.onLine) return;
+  const currentVersion = appVersionFromDocument();
+  const nextVersion = await deployedAppVersion();
+  if (!currentVersion || !nextVersion || currentVersion === nextVersion) return;
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("hearthReload", String(Date.now()));
+  window.location.replace(url.toString());
+}
+
+function scheduleUpdateChecks() {
+  setTimeout(() => {
+    checkForDashboardUpdate().catch(() => {});
+  }, 15 * 1000);
+
+  setInterval(() => {
+    checkForDashboardUpdate().catch(() => {});
+  }, UPDATE_CHECK_INTERVAL_MS);
+}
+
 async function refreshAll() {
   updateClock();
 
@@ -1565,5 +1609,6 @@ setInterval(updateClock, 1000);
 setInterval(updateNetworkStatus, 30 * 1000);
 initMap();
 scheduleRefresh();
+scheduleUpdateChecks();
 refreshAll();
 initializeLocation();
