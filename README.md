@@ -13,6 +13,7 @@ The page is intentionally safe for a public repo:
 
 - Current weather from Open-Meteo.
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
+- Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
 - Current-location map that follows the page theme with dark/light CARTO tiles.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.

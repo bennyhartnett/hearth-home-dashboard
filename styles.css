@@ -221,6 +221,13 @@ body[data-theme="light"] .map-panel {
   overflow: hidden;
   min-height: 120px;
   background: linear-gradient(160deg, rgba(92, 240, 155, 0.15), rgba(103, 184, 255, 0.12));
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero-photo:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
 }
 
 .hero-photo img {

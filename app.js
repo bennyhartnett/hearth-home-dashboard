@@ -57,6 +57,7 @@ const STORAGE_KEY = "hearth-dashboard-settings-v2";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
 const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
+const HERO_PHOTO_CYCLE_MS = 5 * 60 * 1000;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -100,6 +101,7 @@ const METRO_LINE_NAMES = {
 };
 
 const DEFAULT_PHOTO_URL = SCENE_PHOTOS.noon;
+const HERO_PHOTO_SEQUENCE = Object.values(SCENE_PHOTOS);
 
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
@@ -131,6 +133,10 @@ let lastWeatherVisual = "clear";
 let userMarker = null;
 let lastUserLatLon = null;
 let mapCenteredOnce = false;
+let heroPhotoCycleIndex = -1;
+let heroPhotoCycleUntil = 0;
+let heroPhotoCycleTimer = null;
+let lastAutoHeroPhotoUrl = DEFAULT_PHOTO_URL;
 
 const $ = (id) => document.getElementById(id);
 
@@ -226,15 +232,74 @@ function hydrateStaticIcons() {
   });
 }
 
-function applyHeroPhoto(sceneUrl = DEFAULT_PHOTO_URL) {
+function automaticHeroPhotoUrl(sceneUrl = DEFAULT_PHOTO_URL) {
+  return (settings.photoUrl || sceneUrl || DEFAULT_PHOTO_URL).trim();
+}
+
+function setHeroPhoto(url) {
   const img = $("heroPhoto");
   if (!img) return;
-  const url = (settings.photoUrl || sceneUrl || DEFAULT_PHOTO_URL).trim();
   if (img.getAttribute("src") !== url) img.setAttribute("src", url);
 }
 
+function isHeroPhotoCycling() {
+  return heroPhotoCycleUntil > Date.now();
+}
+
+function clearHeroPhotoCycle() {
+  if (heroPhotoCycleTimer) clearTimeout(heroPhotoCycleTimer);
+  heroPhotoCycleTimer = null;
+  heroPhotoCycleUntil = 0;
+}
+
+function scheduleHeroPhotoRevert() {
+  if (heroPhotoCycleTimer) clearTimeout(heroPhotoCycleTimer);
+  const delay = Math.max(1000, heroPhotoCycleUntil - Date.now());
+  heroPhotoCycleTimer = setTimeout(() => {
+    clearHeroPhotoCycle();
+    updateHeroScene(new Date());
+  }, delay);
+}
+
+function applyHeroPhoto(sceneUrl = DEFAULT_PHOTO_URL) {
+  lastAutoHeroPhotoUrl = automaticHeroPhotoUrl(sceneUrl);
+  if (isHeroPhotoCycling()) return;
+  setHeroPhoto(lastAutoHeroPhotoUrl);
+}
+
+function cycleHeroPhoto() {
+  const img = $("heroPhoto");
+  if (!img || !HERO_PHOTO_SEQUENCE.length) return;
+
+  const currentUrl = img.getAttribute("src") || lastAutoHeroPhotoUrl;
+  const currentIndex = HERO_PHOTO_SEQUENCE.indexOf(currentUrl);
+  const autoIndex = HERO_PHOTO_SEQUENCE.indexOf(lastAutoHeroPhotoUrl);
+  const baseIndex = currentIndex >= 0 ? currentIndex : autoIndex >= 0 ? autoIndex : heroPhotoCycleIndex;
+
+  heroPhotoCycleIndex = (baseIndex + 1 + HERO_PHOTO_SEQUENCE.length) % HERO_PHOTO_SEQUENCE.length;
+  heroPhotoCycleUntil = Date.now() + HERO_PHOTO_CYCLE_MS;
+  setHeroPhoto(HERO_PHOTO_SEQUENCE[heroPhotoCycleIndex]);
+  scheduleHeroPhotoRevert();
+}
+
+function wireHeroPhotoCycle() {
+  const frame = document.querySelector(".hero-photo");
+  if (!frame) return;
+
+  frame.setAttribute("role", "button");
+  frame.setAttribute("tabindex", "0");
+  frame.setAttribute("aria-label", "Cycle scene photo");
+  frame.title = "Cycle scene photo";
+  frame.addEventListener("click", cycleHeroPhoto);
+  frame.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    cycleHeroPhoto();
+  });
+}
+
 function preloadScenePhotos() {
-  Object.values(SCENE_PHOTOS).forEach((url) => {
+  HERO_PHOTO_SEQUENCE.forEach((url) => {
     const img = new Image();
     img.src = url;
   });
@@ -1557,6 +1622,7 @@ function wireSettings() {
     });
     $("settingsDialog").close();
     scheduleRefresh();
+    clearHeroPhotoCycle();
     applyHeroPhoto();
     if (settings.themeMode === "light" || settings.themeMode === "dark") {
       applyTheme(settings.themeMode);
@@ -1656,6 +1722,7 @@ wirePageZoomGuards();
 hydrateStaticIcons();
 preloadScenePhotos();
 applyHeroPhoto();
+wireHeroPhotoCycle();
 applyTheme(settings.themeMode === "light" ? "light" : "dark");
 wireSettings();
 updateClock();
