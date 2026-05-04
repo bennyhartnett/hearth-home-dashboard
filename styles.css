@@ -99,11 +99,11 @@ body[data-theme="light"]::before {
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  background: rgba(10, 20, 17, 0.4);
+  background: #16242a;
 }
 
 body[data-theme="light"] .map-panel {
-  background: rgba(255, 253, 248, 0.4);
+  background: #16242a;
 }
 
 /* Hide leaflet attribution & controls */
@@ -215,7 +215,7 @@ body[data-theme="light"] .map-panel {
   display: inline-flex;
   align-items: baseline;
   gap: 10px;
-  font-size: clamp(96px, 14vh, 168px);
+  font-size: clamp(80px, 12vh, 144px);
   line-height: 0.88;
   font-weight: 200;
   letter-spacing: -0.045em;
