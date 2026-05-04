@@ -7,7 +7,7 @@
     <title>Home</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306100c'/%3E%3Cpath d='M16 36 32 20l16 16v14H16z' fill='%2356d18f'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css?v=35">
+    <link rel="stylesheet" href="styles.css?v=36">
   </head>
   <body>
     <main class="dashboard" aria-live="polite">
@@ -48,6 +48,7 @@
                 <span id="currentTemp" class="temperature">--</span>
                 <span class="degree">&deg;</span>
               </div>
+              <p id="feelsLike" class="feels-like">Feels like --&deg;</p>
               <p id="weatherSummary" class="summary">Waiting for location</p>
               <p id="locationLabel" class="overlay-location">Current Location</p>
             </div>
@@ -66,10 +67,6 @@
         </div>
 
         <div class="weather-metrics">
-          <div>
-            <span class="metric-label">Feels</span>
-            <strong id="feelsLike">--&deg;</strong>
-          </div>
           <div>
             <span class="metric-label">High / Low</span>
             <strong id="highLow">-- / --</strong>
@@ -276,6 +273,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://openingh.openstreetmap.de/opening_hours.js/opening_hours+deps.min.js"></script>
-    <script src="app.js?v=35"></script>
+    <script src="app.js?v=36"></script>
   </body>
 </html>

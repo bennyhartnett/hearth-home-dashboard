@@ -325,6 +325,14 @@ body[data-theme="light"] .map-panel {
 
 .weather-overlay > * { margin: 0; }
 
+.feels-like {
+  font-size: clamp(13px, 1.6vh, 17px);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: -2px;
+  font-variant-numeric: tabular-nums;
+}
+
 .overlay-location {
   font-size: clamp(13px, 1.6vh, 16px);
   font-weight: 600;

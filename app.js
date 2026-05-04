@@ -608,7 +608,7 @@ async function updateWeather(location) {
 
   setText("currentTemp", round(current.temperature_2m));
   setText("weatherSummary", summary);
-  setText("feelsLike", `${round(current.apparent_temperature)}°`);
+  setText("feelsLike", `Feels like ${round(current.apparent_temperature)}°`);
   setText("humidity", `${round(current.relative_humidity_2m)}%`);
   setText("wind", `${round(current.wind_speed_10m)} mph`);
   setText("highLow", `${round(daily.temperature_2m_max?.[0])}° / ${round(daily.temperature_2m_min?.[0])}°`);
