@@ -20,7 +20,7 @@ The page is intentionally safe for a public repo:
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
 - Restaurants within 0.7 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass, with details for hours, phone, address, and website when OSM has them.
-- Auto light/dark mode based on sunrise and sunset, plus manual light/dark settings.
+- Auto light/dark mode that switches at sunrise and sunset, plus manual light/dark settings.
 - Page permission prompts for location, camera, microphone, notifications, persistent storage, fullscreen, and screen wake lock.
 - A kiosk-friendly portrait layout for a 1080x1920 display.
 

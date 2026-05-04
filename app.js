@@ -118,6 +118,7 @@ applySettingsFromUrl();
 let currentLocation = null;
 let refreshTimer = null;
 let metroTimer = null;
+let themeTransitionTimer = null;
 let map = null;
 let tileLayer = null;
 let currentTileUrl = null;
@@ -400,29 +401,81 @@ function cycleTheme() {
   const next = order[(order.indexOf(current) + 1) % order.length];
   saveSettings({ ...settings, themeMode: next });
   if (next === "light" || next === "dark") {
+    clearThemeTransitionTimer();
     applyTheme(next);
-  } else if (lastDailyData) {
+  } else {
     applyThemeFromSun(lastDailyData);
   }
   updateThemeButton();
 }
 
-function applyThemeFromSun(daily) {
+function fallbackThemeForTime(now = new Date()) {
+  const hour = now.getHours();
+  return hour >= 7 && hour < 19 ? "light" : "dark";
+}
+
+function sunThemeEvents(daily) {
+  const events = [];
+  (daily?.sunrise || []).forEach((sunriseValue, index) => {
+    const sunrise = new Date(sunriseValue);
+    if (!Number.isNaN(sunrise.getTime())) events.push({ at: sunrise, theme: "light" });
+
+    const sunsetValue = daily?.sunset?.[index];
+    const sunset = sunsetValue ? new Date(sunsetValue) : null;
+    if (sunset && !Number.isNaN(sunset.getTime())) events.push({ at: sunset, theme: "dark" });
+  });
+  return events.sort((a, b) => a.at - b.at);
+}
+
+function themeForSun(daily, now = new Date()) {
+  const events = sunThemeEvents(daily);
+  if (!events.length) return fallbackThemeForTime(now);
+
+  let latest = null;
+  for (const event of events) {
+    if (event.at > now) break;
+    latest = event;
+  }
+
+  if (latest) return latest.theme;
+  return events[0]?.theme === "light" ? "dark" : fallbackThemeForTime(now);
+}
+
+function nextSunThemeEvent(daily, now = new Date()) {
+  return sunThemeEvents(daily).find((event) => event.at > now) || null;
+}
+
+function clearThemeTransitionTimer() {
+  if (themeTransitionTimer) clearTimeout(themeTransitionTimer);
+  themeTransitionTimer = null;
+}
+
+function scheduleSunThemeTransition(daily = lastDailyData) {
+  clearThemeTransitionTimer();
+  if (settings.themeMode === "light" || settings.themeMode === "dark") return;
+
+  const nextEvent = nextSunThemeEvent(daily);
+  if (!nextEvent) return;
+
+  const delay = Math.max(1000, nextEvent.at.getTime() - Date.now() + 1000);
+  themeTransitionTimer = setTimeout(() => {
+    if (settings.themeMode !== "light" && settings.themeMode !== "dark") {
+      applyTheme(nextEvent.theme);
+      updateHeroScene(new Date());
+      scheduleSunThemeTransition(lastDailyData);
+    }
+  }, Math.min(delay, 2147483647));
+}
+
+function applyThemeFromSun(daily, now = new Date()) {
   if (settings.themeMode === "light" || settings.themeMode === "dark") {
+    clearThemeTransitionTimer();
     applyTheme(settings.themeMode);
     return;
   }
 
-  const sunrise = daily?.sunrise?.[0] ? new Date(daily.sunrise[0]) : null;
-  const sunset = daily?.sunset?.[0] ? new Date(daily.sunset[0]) : null;
-  const now = new Date();
-  if (sunrise && sunset) {
-    applyTheme(now >= sunrise && now < sunset ? "light" : "dark");
-    return;
-  }
-
-  const hour = now.getHours();
-  applyTheme(hour >= 7 && hour < 19 ? "light" : "dark");
+  applyTheme(themeForSun(daily, now));
+  scheduleSunThemeTransition(daily);
 }
 
 function updateClock() {
@@ -1505,7 +1558,12 @@ function wireSettings() {
     $("settingsDialog").close();
     scheduleRefresh();
     applyHeroPhoto();
-    if (settings.themeMode === "light" || settings.themeMode === "dark") applyTheme(settings.themeMode);
+    if (settings.themeMode === "light" || settings.themeMode === "dark") {
+      applyTheme(settings.themeMode);
+      clearThemeTransitionTimer();
+    } else {
+      applyThemeFromSun(lastDailyData);
+    }
     initializeLocation();
   });
 }
@@ -1541,12 +1599,6 @@ function wirePageZoomGuards() {
   ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
     document.addEventListener(type, blockOutsideMap, { passive: false });
   });
-
-  document.addEventListener("touchmove", (event) => {
-    if (event.cancelable && event.touches?.length > 1 && !isMapInteractionTarget(event.target)) {
-      event.preventDefault();
-    }
-  }, { passive: false });
 
   document.addEventListener("wheel", (event) => {
     if (event.cancelable && event.ctrlKey && !isMapInteractionTarget(event.target)) {
@@ -1593,7 +1645,10 @@ async function acquireWakeLock() {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") acquireWakeLock();
+  if (document.visibilityState === "visible") {
+    acquireWakeLock();
+    applyThemeFromSun(lastDailyData);
+  }
 });
 acquireWakeLock();
 
