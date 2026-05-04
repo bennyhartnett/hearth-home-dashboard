@@ -762,9 +762,9 @@ button.data-row:focus-visible {
 
 /* Daily forecast ---------------------------------------------------- */
 .daily-card {
-  padding: clamp(14px, 1.8vh, 20px);
+  padding: 14px;
   display: grid;
-  gap: 10px;
+  gap: 0;
 }
 
 .daily-list {

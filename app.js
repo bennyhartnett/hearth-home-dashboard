@@ -670,11 +670,12 @@ function renderDaily(daily) {
   container.innerHTML = "";
 
   (daily.time || []).slice(0, 5).forEach((time, index) => {
-    const [summary] = weatherInfo(daily.weather_code?.[index]);
+    const [summary, visual] = weatherInfo(daily.weather_code?.[index]);
     const article = document.createElement("article");
     article.className = "daily-item";
     article.innerHTML = `
       <strong>${new Intl.DateTimeFormat([], { weekday: "short" }).format(new Date(`${time}T12:00:00`))}</strong>
+      <span class="hour-glyph ${visual}" aria-hidden="true"></span>
       <p class="muted">${escapeHtml(summary)}</p>
       <span class="daily-temp">${round(daily.temperature_2m_max?.[index])}° / ${round(daily.temperature_2m_min?.[index])}°</span>
     `;
