@@ -581,12 +581,21 @@ body[data-theme="light"] .hour-card {
   --icon-fog: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 11h14M3 15h18M5 19h14' stroke='black' stroke-width='2.4' stroke-linecap='round' fill='none'/></svg>");
 }
 
-/* Cards grid (Metro/Drive/Mobility/Restaurants) --------------------- */
+/* Cards grid (independent left/right columns) ---------------------- */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(10px, 1.4vh, 14px);
   min-height: 0;
+  align-items: start;
+}
+
+.cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vh, 14px);
+  min-height: 0;
+  min-width: 0;
 }
 
 .card {
@@ -608,7 +617,7 @@ body[data-theme="light"] .hour-card {
 .card-header h2 {
   display: inline-flex;
   align-items: center;
-  gap: 20px;
+  gap: 26px;
   font-size: clamp(18px, 2.4vh, 22px);
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -651,8 +660,8 @@ body[data-theme="light"] .empty-state {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 16px;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
