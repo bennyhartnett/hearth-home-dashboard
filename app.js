@@ -44,7 +44,7 @@ const DESTINATIONS = [
 ];
 
 const CLARENDON_STATION_CODE = "K02";
-const RESTAURANT_RADIUS_MILES = 0.7;
+const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "hearth-dashboard-settings-v2";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
@@ -166,6 +166,7 @@ function iconSvg(name) {
     sandwich: '<svg viewBox="0 0 24 24"><path d="m4 12 8-6 8 6v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5ZM4 12h16M8 15h2M13 15h3"/></svg>',
     scooter: '<svg viewBox="0 0 24 24"><path d="M7 17.5h7.5a3.5 3.5 0 0 0 3.5-3.5V4M12 7h6.5M5.5 17.5l4.5-9h3"/><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/></svg>',
     train: '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="14.5" rx="3.5"/><path d="M5 10.5h14M9 21l2.5-3M15 21l-2.5-3"/><circle cx="9" cy="14" r="0.9" fill="currentColor"/><circle cx="15" cy="14" r="0.9" fill="currentColor"/></svg>',
+    grocery: '<svg viewBox="0 0 24 24"><path d="M3 4h2.5l2 11.5a2 2 0 0 0 2 1.5h7.5a2 2 0 0 0 2-1.5L21 8H7"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></svg>',
     locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="9"/><path d="M12 1.5v3M12 19.5v3M22.5 12h-3M4.5 12h-3"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.6a1.5 1.5 0 0 0 .3 1.6l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.5 1.5 0 0 0-1.6-.3 1.5 1.5 0 0 0-.9 1.4V20a2 2 0 1 1-4 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.6.3l-.1.1A2 2 0 1 1 4.9 16l.1-.1a1.5 1.5 0 0 0 .3-1.6 1.5 1.5 0 0 0-1.4-.9H4a2 2 0 1 1 0-4h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.6L4.9 6.7A2 2 0 1 1 7.7 4l.1.1a1.5 1.5 0 0 0 1.6.3h.1a1.5 1.5 0 0 0 .9-1.4V3a2 2 0 1 1 4 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.6-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.5 1.5 0 0 0-.3 1.6v.1a1.5 1.5 0 0 0 1.4.9H21a2 2 0 1 1 0 4h-.1a1.5 1.5 0 0 0-1.4.9Z"/></svg>',
@@ -979,14 +980,20 @@ async function updateRestaurants(location) {
     return;
   }
 
+  const amenityFilter = `["amenity"~"restaurant|cafe|fast_food|bar|pub"]["opening_hours"]`;
+  const shopFilter = `["shop"~"supermarket|grocery|convenience|greengrocer"]["opening_hours"]`;
+  const around = `(around:${RESTAURANT_RADIUS_METERS},${location.lat},${location.lon})`;
   const query = `
     [out:json][timeout:25];
     (
-      node["amenity"~"restaurant|cafe|fast_food|bar|pub"]["opening_hours"](around:${RESTAURANT_RADIUS_METERS},${location.lat},${location.lon});
-      way["amenity"~"restaurant|cafe|fast_food|bar|pub"]["opening_hours"](around:${RESTAURANT_RADIUS_METERS},${location.lat},${location.lon});
-      relation["amenity"~"restaurant|cafe|fast_food|bar|pub"]["opening_hours"](around:${RESTAURANT_RADIUS_METERS},${location.lat},${location.lon});
+      node${amenityFilter}${around};
+      way${amenityFilter}${around};
+      relation${amenityFilter}${around};
+      node${shopFilter}${around};
+      way${shopFilter}${around};
+      relation${shopFilter}${around};
     );
-    out center tags 80;
+    out center tags 120;
   `;
   const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
   if (!response.ok) throw new Error(`Overpass ${response.status}`);
@@ -1004,7 +1011,7 @@ async function updateRestaurants(location) {
   setText("restaurantStatus", `${open.length} open within ${RESTAURANT_RADIUS_MILES} mi`);
 
   if (!open.length) {
-    setEmpty("restaurantList", "No verified-open restaurants nearby.");
+    setEmpty("restaurantList", "No verified-open places nearby.");
     return;
   }
 
@@ -1042,7 +1049,7 @@ function normalizeRestaurant(element, location) {
     return {
       type: "restaurant",
       name: tags.name,
-      kind: tags.amenity || "restaurant",
+      kind: tags.amenity || tags.shop || "place",
       cuisine: tags.cuisine || "",
       openingHours: tags.opening_hours || "",
       phone: tags.phone || tags["contact:phone"] || "",
@@ -1062,6 +1069,7 @@ function placeIcon(place) {
   if (place.kind === "cafe") return "coffee";
   if (place.kind === "bar" || place.kind === "pub") return "drink";
   if (place.kind === "fast_food") return "sandwich";
+  if (["supermarket", "grocery", "convenience", "greengrocer"].includes(place.kind)) return "grocery";
   return "food";
 }
 

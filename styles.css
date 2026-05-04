@@ -920,6 +920,7 @@ body[data-theme="light"] .daily-item {
 .marker-pin { background: #ff8a3d; }
 .marker-bike { background: var(--blue); }
 .marker-scooter { background: #b8d04a; }
+.marker-grocery { background: #4ca64c; }
 
 /* Route details ------------------------------------------------------ */
 .route-details {
