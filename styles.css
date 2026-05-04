@@ -22,6 +22,7 @@
   --radius-xl: 36px;
   --gap: 14px;
   --gap-lg: 18px;
+  --section-gap: clamp(10px, 1.4vh, 18px);
   --blur: saturate(180%) blur(28px);
 }
 
@@ -127,7 +128,7 @@ body[data-theme="light"] .map-panel {
     auto              /* daily */
     auto              /* map */
     auto;             /* cards grid */
-  gap: clamp(10px, 1.4vh, 18px);
+  gap: var(--section-gap);
 }
 
 .glass {
@@ -154,7 +155,7 @@ body[data-theme="light"] .map-panel {
   }
   .dashboard {
     padding: clamp(14px, 1.6vh, 22px) clamp(14px, 1.6vw, 22px);
-    gap: clamp(12px, 1.6vh, 20px);
+    gap: var(--section-gap);
   }
 }
 
@@ -644,7 +645,7 @@ body[data-theme="light"] .hour-card {
 .cards-column {
   display: flex;
   flex-direction: column;
-  gap: clamp(18px, 2.4vh, 28px);
+  gap: var(--section-gap);
   min-height: 0;
   min-width: 0;
 }
