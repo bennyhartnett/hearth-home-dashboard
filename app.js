@@ -64,7 +64,7 @@ const DEFAULT_PHOTO_URL = "./photo.png";
 const DEFAULT_SETTINGS = {
   locationLabel: "Current Location",
   themeMode: "auto",
-  mapTheme: "dark",
+  mapTheme: "auto",
   refreshMinutes: 5,
   mobilityRadiusMiles: 2,
   wmataKey: "",
@@ -171,7 +171,8 @@ function iconSvg(name) {
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.6a1.5 1.5 0 0 0 .3 1.6l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.5 1.5 0 0 0-1.6-.3 1.5 1.5 0 0 0-.9 1.4V20a2 2 0 1 1-4 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.6.3l-.1.1A2 2 0 1 1 4.9 16l.1-.1a1.5 1.5 0 0 0 .3-1.6 1.5 1.5 0 0 0-1.4-.9H4a2 2 0 1 1 0-4h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.6L4.9 6.7A2 2 0 1 1 7.7 4l.1.1a1.5 1.5 0 0 0 1.6.3h.1a1.5 1.5 0 0 0 .9-1.4V3a2 2 0 1 1 4 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.6-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.5 1.5 0 0 0-.3 1.6v.1a1.5 1.5 0 0 0 1.4.9H21a2 2 0 1 1 0 4h-.1a1.5 1.5 0 0 0-1.4.9Z"/></svg>',
     moon: '<svg viewBox="0 0 24 24"><path d="M20.5 14.5A8 8 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.5 4.5l2.1 2.1M17.4 17.4l2.1 2.1M4.5 19.5l2.1-2.1M17.4 6.6l2.1-2.1"/></svg>',
-    auto: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12a9 9 0 0 0 9 9V3a9 9 0 0 0-9 9Z" fill="currentColor"/></svg>'
+    auto: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12a9 9 0 0 0 9 9V3a9 9 0 0 0-9 9Z" fill="currentColor"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>'
   };
   return icons[name] || icons.pin;
 }
@@ -265,6 +266,7 @@ function applyTheme(theme) {
   activeTheme = theme === "light" ? "light" : "dark";
   document.body.dataset.theme = activeTheme;
   document.documentElement.style.colorScheme = activeTheme;
+  setMapStyle();
   updateThemeButton();
 }
 
@@ -429,11 +431,21 @@ function initMap() {
   window.addEventListener("resize", () => map?.invalidateSize());
 }
 
+function resolvedMapTheme() {
+  const setting = settings.mapTheme;
+  if (setting === "light" || setting === "dark") return setting;
+  /* auto: show the opposite of the dashboard theme */
+  return activeTheme === "dark" ? "light" : "dark";
+}
+
 function setMapStyle() {
   if (!map) return;
-  const key = settings.mapTheme === "light" ? "light" : "dark";
+  const key = resolvedMapTheme();
   const style = MAP_STYLES[key];
-  if (currentTileUrl === style.url && tileLayer) return;
+  if (currentTileUrl === style.url && tileLayer) {
+    updateMapThemeButton();
+    return;
+  }
   if (tileLayer) tileLayer.remove();
   tileLayer = L.tileLayer(style.url, { maxZoom: 19, attribution: "" }).addTo(map);
   currentTileUrl = style.url;
@@ -443,16 +455,18 @@ function setMapStyle() {
 function updateMapThemeButton() {
   const button = $("mapThemeButton");
   if (!button) return;
-  const mode = settings.mapTheme === "light" ? "light" : "dark";
-  const iconName = mode === "light" ? "sun" : "moon";
+  const mode = settings.mapTheme || "auto";
+  const iconName = mode === "light" ? "sun" : mode === "dark" ? "moon" : "auto";
   const icon = button.querySelector(".section-icon");
   if (icon) icon.innerHTML = iconSvg(iconName);
-  button.setAttribute("aria-label", `Map: ${mode}`);
-  button.title = `Map: ${mode}`;
+  button.setAttribute("aria-label", `Map theme: ${mode}`);
+  button.title = `Map theme: ${mode}`;
 }
 
 function cycleMapTheme() {
-  const next = settings.mapTheme === "light" ? "dark" : "light";
+  const order = ["auto", "light", "dark"];
+  const current = settings.mapTheme || "auto";
+  const next = order[(order.indexOf(current) + 1) % order.length];
   saveSettings({ ...settings, mapTheme: next });
   setMapStyle();
 }
@@ -1258,6 +1272,7 @@ function wireSettings() {
   $("locateButton").addEventListener("click", () => requestLocation({ forceBrowser: true }));
   $("themeButton").addEventListener("click", cycleTheme);
   $("mapThemeButton").addEventListener("click", cycleMapTheme);
+  $("refreshButton").addEventListener("click", () => window.location.reload());
 
   $("resetSettings").addEventListener("click", () => {
     saveSettings({ ...DEFAULT_SETTINGS });
