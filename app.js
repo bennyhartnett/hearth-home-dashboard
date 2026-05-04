@@ -1323,6 +1323,26 @@ if (navigator.connection?.addEventListener) {
   navigator.connection.addEventListener("change", updateNetworkStatus);
 }
 
+/* Keep the screen awake. Wake locks are auto-released on visibility loss,
+   so re-acquire whenever the page becomes visible again. */
+async function acquireWakeLock() {
+  if (!navigator.wakeLock?.request) return;
+  try {
+    if (wakeLock && !wakeLock.released) return;
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener?.("release", () => {
+      if (document.visibilityState === "visible") acquireWakeLock();
+    });
+  } catch {
+    /* permission denied or unsupported — ignore */
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") acquireWakeLock();
+});
+acquireWakeLock();
+
 wirePageZoomGuards();
 hydrateStaticIcons();
 applyHeroPhoto();
