@@ -27,7 +27,7 @@ The page is intentionally safe for a public repo:
 
 ## Data Notes
 
-This dashboard does not use fallback sample values. If a live source is unavailable, rate-limited, lacks CORS support, or requires configuration, the card shows that state instead of made-up data.
+This dashboard does not use fallback sample values. If a live source is temporarily offline, rate-limited, lacks CORS support, or requires configuration, the card keeps its last good data when it has one and otherwise shows a calm updating state.
 
 GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the Hearth settings dialog so the device can still use live data feeds without committing a location to GitHub. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
 
@@ -57,4 +57,10 @@ The page saves the allowed settings locally, then strips those parameters from t
 
 ## Deploy Notes
 
-After the page has loaded this release once, it checks the deployed dashboard every minute and automatically reloads when the `app.js` version in `index.html` changes. Bump the `app.js?v=...` query string in `index.html` for each dashboard deploy so the Hearth display picks up the new build without a manual refresh.
+After the page has loaded this release once, it checks the deployed dashboard every minute and automatically reloads when the `hearth-build` marker in `index.html` changes. Bump the `hearth-build` value plus the `styles.css?v=...` and `app.js?v=...` query strings together for each dashboard deploy so the Hearth display picks up the new build without a manual refresh.
+
+Run the smoke checks before deploying:
+
+```text
+node scripts/smoke.js
+```

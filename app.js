@@ -54,6 +54,8 @@ const CLARENDON_STATION_CODE = "K02";
 const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "hearth-dashboard-settings-v2";
+const LIVE_CACHE_KEY = "hearth-dashboard-live-cache-v1";
+const BUILD_VERSION = "52";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
 const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
@@ -117,6 +119,7 @@ const DEFAULT_SETTINGS = {
 
 let settings = loadSettings();
 applySettingsFromUrl();
+let liveCache = loadLiveCache();
 let currentLocation = null;
 let refreshTimer = null;
 let metroTimer = null;
@@ -152,6 +155,31 @@ function loadSettings() {
 function saveSettings(nextSettings) {
   settings = { ...DEFAULT_SETTINGS, ...nextSettings };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+function loadLiveCache() {
+  try {
+    return JSON.parse(localStorage.getItem(LIVE_CACHE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLiveCache() {
+  try {
+    localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify(liveCache));
+  } catch {
+    /* Best effort only; the live screen should keep running even if storage is full. */
+  }
+}
+
+function saveLiveCacheEntry(key, value) {
+  liveCache[key] = { ...value, savedAt: Date.now() };
+  saveLiveCache();
+}
+
+function liveCacheEntry(key) {
+  return liveCache?.[key] || null;
 }
 
 function applySettingsFromUrl() {
@@ -378,6 +406,8 @@ function weatherInfo(code) {
 }
 
 function keepWeatherCardOnRefreshFailure() {
+  if (restoreCachedWeather()) return;
+
   const currentTemp = $("currentTemp")?.textContent.trim();
   const summary = $("weatherSummary");
   if (summary && (!currentTemp || currentTemp === "--")) {
@@ -849,6 +879,22 @@ async function updateWeather(location) {
   }
 
   const data = await forecastResponse.value.json();
+  let airAqi = null;
+
+  if (airResponse.status === "fulfilled" && airResponse.value.ok) {
+    try {
+      const air = await airResponse.value.json();
+      airAqi = air.current?.us_aqi ?? null;
+    } catch {
+      airAqi = null;
+    }
+  }
+
+  saveLiveCacheEntry("weather", { data, airAqi });
+  renderWeatherData(data, airAqi, Date.now());
+}
+
+function renderWeatherData(data, airAqi = null, savedAt = Date.now()) {
   const current = data.current || {};
   const [summary, visual] = weatherInfo(current.weather_code);
   const daily = data.daily || {};
@@ -864,7 +910,7 @@ async function updateWeather(location) {
   setText("lowTemp", `${round(daily.temperature_2m_min?.[0])}°`);
   setText("rainSoon", findNextRain(data.hourly || {}));
   setText("cloudCover", `${round(current.cloud_cover)}%`);
-  setText("updatedLine", `Updated ${formatTime(new Date())}`);
+  setText("updatedLine", `Updated ${formatTime(new Date(savedAt))}`);
 
   /* Sun times: today's sunrise/sunset; if past sunset, next day's sunrise */
   const now = new Date();
@@ -876,23 +922,19 @@ async function updateWeather(location) {
   setText("sunriseTime", nextSunrise ? formatTime(nextSunrise) : "--");
   setText("sunsetTime", sunsetToday ? formatTime(sunsetToday) : "--");
 
-  /* Air quality */
-  if (airResponse.status === "fulfilled" && airResponse.value.ok) {
-    try {
-      const air = await airResponse.value.json();
-      const aqi = air.current?.us_aqi;
-      setText("airQuality", formatAqi(aqi));
-    } catch {
-      setText("airQuality", "--");
-    }
-  } else {
-    setText("airQuality", "--");
-  }
+  setText("airQuality", formatAqi(airAqi));
 
   applyThemeFromSun(daily);
   updateHeroScene(now);
   renderHourly(data.hourly || {});
   renderDaily(daily);
+}
+
+function restoreCachedWeather() {
+  const cached = liveCacheEntry("weather");
+  if (!cached?.data) return false;
+  renderWeatherData(cached.data, cached.airAqi, cached.savedAt);
+  return true;
 }
 
 function formatAqi(value) {
@@ -1011,16 +1053,12 @@ async function fetchTollFreeRoute(location, destination) {
 
   const route = data.routes[0];
   if (routeUsesKnownTolls(route)) {
-    throw new Error(`${destination.name}: toll-free route unavailable`);
+    throw new Error(`${destination.name}: toll route detected`);
   }
   return route;
 }
 
 async function updateDriveTimes(location) {
-  const container = $("driveList");
-  container.innerHTML = "";
-  driveRoutes = new Map();
-
   const rows = await Promise.all(DESTINATIONS.map(async (destination) => {
     const route = await fetchTollFreeRoute(location, destination);
     const row = {
@@ -1031,13 +1069,21 @@ async function updateDriveTimes(location) {
       route,
       steps: (route.legs || []).flatMap((leg) => leg.steps || [])
     };
-    driveRoutes.set(destination.name, row);
     return row;
   }));
 
   rows.sort((a, b) => a.minutes - b.minutes);
+  saveLiveCacheEntry("drive", { rows });
+  renderDriveRows(rows);
+}
+
+function renderDriveRows(rows = []) {
+  const container = $("driveList");
+  container.innerHTML = "";
+  driveRoutes = new Map();
 
   rows.forEach((row) => {
+    driveRoutes.set(row.name, row);
     container.append(createDataButton(
       row.name,
       `Toll-free · ${formatMiles(row.miles)}`,
@@ -1046,6 +1092,13 @@ async function updateDriveTimes(location) {
       () => showRoute(row.name)
     ));
   });
+}
+
+function restoreCachedDriveTimes() {
+  const cached = liveCacheEntry("drive");
+  if (!cached?.rows?.length) return false;
+  renderDriveRows(cached.rows);
+  return true;
 }
 
 function showRoute(name) {
@@ -1138,6 +1191,11 @@ async function updateMetro() {
   if (!response.ok) throw new Error(`WMATA ${response.status}`);
   const data = await response.json();
   const trains = (data.Trains || []).slice(0, 6);
+  saveLiveCacheEntry("metro", { trains });
+  renderMetroTrains(trains, Date.now());
+}
+
+function renderMetroTrains(trains = [], savedAt = Date.now()) {
   const container = $("metroList");
   container.innerHTML = "";
 
@@ -1157,7 +1215,15 @@ async function updateMetro() {
     );
   });
 
-  setText("metroStatus", `Clarendon · updated ${formatTime(new Date())}`);
+  setText("metroStatus", `Clarendon · updated ${formatTime(new Date(savedAt))}`);
+}
+
+function restoreCachedMetro() {
+  if (!settings.wmataKey) return false;
+  const cached = liveCacheEntry("metro");
+  if (!cached?.trains) return false;
+  renderMetroTrains(cached.trains, cached.savedAt);
+  return true;
 }
 
 /* Mobility ---------------------------------------------------------- */
@@ -1166,9 +1232,17 @@ async function updateMobility(location) {
     fetchBikes(location),
     fetchScooters(location)
   ]);
+  if (bikeStations.status === "rejected" && scooters.status === "rejected") {
+    throw new Error("Mobility refresh skipped");
+  }
 
   const bikes = bikeStations.status === "fulfilled" ? bikeStations.value : [];
   const scooterList = scooters.status === "fulfilled" ? scooters.value : [];
+  saveLiveCacheEntry("mobility", { bikes, scooters: scooterList });
+  renderMobilityData(bikes, scooterList);
+}
+
+function renderMobilityData(bikes = [], scooterList = []) {
   const container = $("mobilityList");
   container.innerHTML = "";
   if (layers.bikes) layers.bikes.clearLayers();
@@ -1218,6 +1292,13 @@ async function updateMobility(location) {
   });
 }
 
+function restoreCachedMobility() {
+  const cached = liveCacheEntry("mobility");
+  if (!cached) return false;
+  renderMobilityData(cached.bikes || [], cached.scooters || []);
+  return true;
+}
+
 async function fetchBikes(location) {
   const response = await fetch("https://api.citybik.es/v2/networks/capital-bikeshare", { cache: "no-store" });
   if (!response.ok) throw new Error(`CityBikes ${response.status}`);
@@ -1262,8 +1343,7 @@ async function fetchScooters(location) {
 /* Restaurants -------------------------------------------------------- */
 async function updateRestaurants(location) {
   if (!window.opening_hours) {
-    setEmpty("restaurantList", "Opening-hours parser unavailable.");
-    return;
+    throw new Error("Restaurant refresh skipped");
   }
 
   const amenityFilter = `["amenity"~"restaurant|cafe|fast_food|bar|pub"]["opening_hours"]`;
@@ -1291,6 +1371,11 @@ async function updateRestaurants(location) {
     .filter((place) => place.openNow)
     .sort((a, b) => a.distanceMiles - b.distanceMiles);
 
+  saveLiveCacheEntry("restaurants", { open });
+  renderRestaurantsData(open);
+}
+
+function renderRestaurantsData(open = []) {
   const container = $("restaurantList");
   container.innerHTML = "";
   if (layers.restaurants) layers.restaurants.clearLayers();
@@ -1316,6 +1401,13 @@ async function updateRestaurants(location) {
         .addTo(layers.restaurants);
     }
   });
+}
+
+function restoreCachedRestaurants() {
+  const cached = liveCacheEntry("restaurants");
+  if (!cached) return false;
+  renderRestaurantsData(cached.open || []);
+  return true;
 }
 
 function normalizeRestaurant(element, location) {
@@ -1507,6 +1599,9 @@ async function requestPagePermissions() {
 
 /* Refresh ------------------------------------------------------------ */
 function appVersionFromDocument(documentRoot = document) {
+  const build = documentRoot.querySelector('meta[name="hearth-build"]')?.getAttribute("content");
+  if (build) return build;
+
   const script = documentRoot.querySelector('script[src*="app.js"]');
   if (!script) return "";
   const src = script.getAttribute("src") || "";
@@ -1564,17 +1659,17 @@ async function refreshAll() {
     updateWeather(currentLocation).catch(() => {
       keepWeatherCardOnRefreshFailure();
     }),
-    updateDriveTimes(currentLocation).catch((error) => {
-      setEmpty("driveList", `Drive estimates unavailable: ${error.message}`);
+    updateDriveTimes(currentLocation).catch(() => {
+      if (!restoreCachedDriveTimes()) setEmpty("driveList", "Updating drive times.");
     }),
-    updateMetro().catch((error) => {
-      setEmpty("metroList", `Metro unavailable: ${error.message}`);
+    updateMetro().catch(() => {
+      if (!restoreCachedMetro()) setEmpty("metroList", "Updating train arrivals.");
     }),
-    updateMobility(currentLocation).catch((error) => {
-      setEmpty("mobilityList", `Mobility unavailable: ${error.message}`);
+    updateMobility(currentLocation).catch(() => {
+      if (!restoreCachedMobility()) setEmpty("mobilityList", "Updating bikes and scooters.");
     }),
-    updateRestaurants(currentLocation).catch((error) => {
-      setEmpty("restaurantList", `Restaurants unavailable: ${error.message}`);
+    updateRestaurants(currentLocation).catch(() => {
+      if (!restoreCachedRestaurants()) setEmpty("restaurantList", "Updating open nearby.");
     })
   ];
 
@@ -1661,8 +1756,8 @@ function scheduleRefresh() {
 
   /* Metro arrivals refresh every 30 seconds independently. */
   metroTimer = setInterval(() => {
-    updateMetro().catch((error) => {
-      setEmpty("metroList", `Metro unavailable: ${error.message}`);
+    updateMetro().catch(() => {
+      if (!restoreCachedMetro()) setEmpty("metroList", "Updating train arrivals.");
     });
   }, 30 * 1000);
 }
