@@ -374,7 +374,15 @@ function distanceMeters(a, b) {
 }
 
 function weatherInfo(code) {
-  return WEATHER_CODES[code] || ["Weather unavailable", "cloudy"];
+  return WEATHER_CODES[code] || ["Conditions", "cloudy"];
+}
+
+function keepWeatherCardOnRefreshFailure() {
+  const currentTemp = $("currentTemp")?.textContent.trim();
+  const summary = $("weatherSummary");
+  if (summary && (!currentTemp || currentTemp === "--")) {
+    summary.textContent = "Weather";
+  }
 }
 
 function weatherGlyphVisual(visual, time, daily = lastDailyData) {
@@ -837,7 +845,7 @@ async function updateWeather(location) {
   ]);
 
   if (forecastResponse.status !== "fulfilled" || !forecastResponse.value.ok) {
-    throw new Error(`Weather ${forecastResponse.value?.status || "fetch failed"}`);
+    throw new Error("Weather refresh skipped");
   }
 
   const data = await forecastResponse.value.json();
@@ -1553,8 +1561,8 @@ async function refreshAll() {
   }
 
   const tasks = [
-    updateWeather(currentLocation).catch((error) => {
-      setText("weatherSummary", `Weather unavailable: ${error.message}`);
+    updateWeather(currentLocation).catch(() => {
+      keepWeatherCardOnRefreshFailure();
     }),
     updateDriveTimes(currentLocation).catch((error) => {
       setEmpty("driveList", `Drive estimates unavailable: ${error.message}`);
