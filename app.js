@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "64";
+const BUILD_VERSION = "65";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -62,6 +62,12 @@ const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 const ROUTE_DETAILS_AUTO_CLOSE_MS = 60 * 1000;
 const HERO_PHOTO_CYCLE_MS = 5 * 60 * 1000;
+const MAP_TRAFFIC_CENTER = Object.freeze({ lat: 38.8838248, lon: -77.0904684 });
+const VDOT_TRAFFIC_TOKEN_URL = "https://511.vdot.virginia.gov/services/511/map/inrix/token";
+const VDOT_TRAFFIC_LAYER_URL = "https://511.vdot.virginia.gov/services/511/map/layers/road";
+const MAP_TRAFFIC_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
+const MAP_TRAFFIC_TILE_ZOOM = 14;
+const MAP_TRAFFIC_CACHE_KEY = "custom-display-map-traffic-v1";
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -143,6 +149,10 @@ let heroPhotoCycleIndex = -1;
 let heroPhotoCycleUntil = 0;
 let heroPhotoCycleTimer = null;
 let lastAutoHeroPhotoUrl = DEFAULT_PHOTO_URL;
+let trafficRefreshTimer = null;
+let trafficLayerConfig = null;
+let trafficToken = null;
+let lastTrafficUpdateAt = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -736,6 +746,200 @@ function initMap() {
   map = null;
   layers = {};
   setMapStyle();
+}
+
+function mapTrafficTile(lat, lon, zoom) {
+  const scale = 2 ** zoom;
+  const x = Math.floor(((lon + 180) / 360) * scale);
+  const latitudeRadians = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.asinh(Math.tan(latitudeRadians)) / Math.PI) / 2 * scale);
+  let quadKey = "";
+  for (let level = zoom; level > 0; level -= 1) {
+    let digit = 0;
+    const mask = 1 << (level - 1);
+    if ((x & mask) !== 0) digit += 1;
+    if ((y & mask) !== 0) digit += 2;
+    quadKey += digit;
+  }
+
+  const world = 20037508.342789244;
+  const tileSize = (world * 2) / scale;
+  const minX = -world + x * tileSize;
+  const maxX = minX + tileSize;
+  const maxY = world - y * tileSize;
+  const minY = maxY - tileSize;
+  return { quadKey, bbox: [minX, minY, maxX, maxY].join(",") };
+}
+
+function loadCachedMapTraffic() {
+  try {
+    const value = JSON.parse(localStorage.getItem(MAP_TRAFFIC_CACHE_KEY));
+    if (!value || Date.now() - Number(value.sampledAt) > 12 * 60 * 60 * 1000) return null;
+    if (!Number.isFinite(value.count) || !Number.isFinite(value.speedFactor)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedMapTraffic(value) {
+  try {
+    localStorage.setItem(MAP_TRAFFIC_CACHE_KEY, JSON.stringify(value));
+  } catch {
+    /* Storage may be unavailable in kiosk privacy modes. */
+  }
+}
+
+async function getVdotTrafficLayerConfig() {
+  if (trafficLayerConfig) return trafficLayerConfig;
+  const response = await fetch(VDOT_TRAFFIC_LAYER_URL, { cache: "no-store" });
+  if (!response.ok) throw new Error(`VDOT traffic layer ${response.status}`);
+  const payload = await response.json();
+  const layer = payload?.data?.find((candidate) => candidate.identifier === "trfc");
+  if (!layer?.data_path || !layer?.parameters) throw new Error("VDOT traffic layer unavailable");
+  trafficLayerConfig = {
+    dataPath: layer.data_path,
+    parameters: String(layer.parameters).trim().replace(/^\?/, "")
+  };
+  return trafficLayerConfig;
+}
+
+async function getVdotTrafficToken() {
+  if (trafficToken && trafficToken.expiresAt - Date.now() > 5 * 60 * 1000) return trafficToken.value;
+  const response = await fetch(VDOT_TRAFFIC_TOKEN_URL, { cache: "no-store" });
+  if (!response.ok) throw new Error(`VDOT traffic token ${response.status}`);
+  const payload = await response.json();
+  const value = payload?.response?.token;
+  const expiresAt = Date.parse(payload?.response?.expiry || "");
+  if (!value) throw new Error("VDOT traffic token unavailable");
+  trafficToken = { value, expiresAt: Number.isFinite(expiresAt) ? expiresAt : Date.now() + 30 * 60 * 1000 };
+  return value;
+}
+
+async function trafficTileUrl() {
+  const [config, token] = await Promise.all([getVdotTrafficLayerConfig(), getVdotTrafficToken()]);
+  const tile = mapTrafficTile(MAP_TRAFFIC_CENTER.lat, MAP_TRAFFIC_CENTER.lon, MAP_TRAFFIC_TILE_ZOOM);
+  const url = new URL(tile.quadKey, config.dataPath);
+  const parameters = new URLSearchParams(config.parameters);
+  parameters.set("FORMAT", "image/png");
+  parameters.set("BBOX", tile.bbox);
+  parameters.set("WIDTH", "256");
+  parameters.set("HEIGHT", "256");
+  parameters.set("FRCLevel", "1,2,3");
+  parameters.set("ACCESSTOKEN", token);
+  url.search = parameters.toString();
+  return url.toString();
+}
+
+async function trafficTilePixels() {
+  const response = await fetch(await trafficTileUrl(), { cache: "no-store" });
+  if (!response.ok) throw new Error(`VDOT traffic tile ${response.status}`);
+  const blob = await response.blob();
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Traffic canvas unavailable");
+
+  if ("createImageBitmap" in window) {
+    const bitmap = await createImageBitmap(blob);
+    context.drawImage(bitmap, 0, 0, 256, 256);
+    bitmap.close?.();
+  } else {
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = new Image();
+      image.src = objectUrl;
+      await image.decode();
+      context.drawImage(image, 0, 0, 256, 256);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+  return context.getImageData(0, 0, 256, 256).data;
+}
+
+function analyzeTrafficPixels(pixels) {
+  let trafficPixels = 0;
+  let congestionWeight = 0;
+  for (let offset = 0; offset < pixels.length; offset += 4) {
+    const red = pixels[offset];
+    const green = pixels[offset + 1];
+    const blue = pixels[offset + 2];
+    const alpha = pixels[offset + 3];
+    if (alpha < 80) continue;
+
+    const isRed = red > 150 && red > green * 1.24 && red > blue * 1.24;
+    const isAmber = red > 155 && green > 85 && green < 220 && blue < 125;
+    const isGreen = green > 80 && green > red * 1.12 && green > blue * 1.12;
+    if (!isRed && !isAmber && !isGreen) continue;
+    trafficPixels += 1;
+    if (isRed) congestionWeight += 1;
+    else if (isAmber) congestionWeight += 0.55;
+    else congestionWeight += 0.06;
+  }
+  if (trafficPixels < 40) throw new Error("No traffic speeds in tile");
+
+  const congestion = congestionWeight / trafficPixels;
+  const level = congestion < 0.18 ? "light" : congestion < 0.42 ? "moderate" : "heavy";
+  return {
+    count: Math.max(13, Math.min(21, Math.round(13 + congestion * 10))),
+    speedFactor: Math.max(0.9, Math.min(2.4, 0.82 + congestion * 1.8)),
+    level,
+    congestion: Number(congestion.toFixed(3)),
+    sampledAt: Date.now()
+  };
+}
+
+function applyMapTrafficState(state, source) {
+  const panel = $("map");
+  const host = $("mapTrafficLayer");
+  if (!panel || !host) return;
+  const count = Math.max(1, Math.round(Number(state.count) || 13));
+  const speedFactor = Math.max(0.5, Number(state.speedFactor) || 1);
+  const cars = [...host.querySelectorAll(".map-car")];
+  cars.forEach((car, index) => {
+    const rank = Number(car.dataset.trafficRank) || index + 1;
+    car.style.display = rank <= count ? "" : "none";
+    const motion = car.querySelector("animateMotion");
+    const baseDuration = Number(car.dataset.baseDuration) || 18;
+    if (motion) motion.setAttribute("dur", `${(baseDuration * speedFactor).toFixed(1)}s`);
+  });
+  const level = String(state.level || "updating");
+  panel.dataset.trafficSource = source;
+  panel.dataset.trafficLevel = level;
+  panel.dataset.trafficCars = String(Math.min(count, cars.length || count));
+  panel.setAttribute("aria-label", `923 North Daniel Street map with ${level} live traffic`);
+}
+
+async function updateMapTraffic() {
+  try {
+    const state = analyzeTrafficPixels(await trafficTilePixels());
+    applyMapTrafficState(state, "live");
+    saveCachedMapTraffic(state);
+    lastTrafficUpdateAt = Date.now();
+  } catch (error) {
+    console.debug("Live map traffic refresh skipped", error);
+  }
+}
+
+async function initializeMapTraffic() {
+  const host = $("mapTrafficLayer");
+  if (!host) return;
+  try {
+    const response = await fetch(`./map-cars.svg?v=${BUILD_VERSION}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Map traffic overlay ${response.status}`);
+    host.innerHTML = await response.text();
+  } catch (error) {
+    console.debug("Map traffic overlay unavailable", error);
+    return;
+  }
+
+  const cached = loadCachedMapTraffic();
+  applyMapTrafficState(cached || { count: 13, speedFactor: 1, level: "updating" }, cached ? "cached" : "fallback");
+  updateMapTraffic();
+  clearInterval(trafficRefreshTimer);
+  trafficRefreshTimer = setInterval(updateMapTraffic, MAP_TRAFFIC_REFRESH_INTERVAL_MS);
 }
 
 function resolvedMapTheme() {
@@ -2071,8 +2275,10 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     acquireWakeLock();
     applyThemeFromSun(lastDailyData);
+    if (Date.now() - lastTrafficUpdateAt >= MAP_TRAFFIC_REFRESH_INTERVAL_MS) updateMapTraffic();
   }
 });
+window.addEventListener("online", updateMapTraffic);
 acquireWakeLock();
 
 wirePageZoomGuards();
@@ -2087,6 +2293,7 @@ updateNetworkStatus();
 setInterval(updateClock, 1000);
 setInterval(updateNetworkStatus, 30 * 1000);
 initMap();
+initializeMapTraffic();
 scheduleRefresh();
 scheduleUpdateChecks();
 refreshAll();

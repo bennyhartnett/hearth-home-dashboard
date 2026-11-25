@@ -201,7 +201,15 @@ def dashed_line(draw, points, fill, width=2, dash=14, gap=12):
             distance += dash + gap
 
 
-def render_map(data, style, number, show_option_label=True, output_path=None):
+def render_map(
+    data,
+    style,
+    number,
+    show_option_label=True,
+    show_address_marker=True,
+    show_attribution=True,
+    output_path=None,
+):
     image = Image.new("RGB", (WIDTH, HEIGHT), style["bg"])
     draw = ImageDraw.Draw(image)
     draw_background_pattern(draw, style)
@@ -290,27 +298,29 @@ def render_map(data, style, number, show_option_label=True, output_path=None):
         x, y, angle = point_on_polyline(points, fraction)
         draw_car(draw, x, y, angle, style["pin_bg"], style["pin_fg"], style.get("car_trails", False))
 
-    center_x, center_y = project(CENTER_LAT, CENTER_LON)
-    pin_radius = 22
-    draw.ellipse((center_x - pin_radius, center_y - pin_radius, center_x + pin_radius, center_y + pin_radius), fill=style["pin_bg"], outline=style["pin_fg"], width=4)
-    draw.ellipse((center_x - 7, center_y - 7, center_x + 7, center_y + 7), fill=style["pin_fg"])
+    if show_address_marker:
+        center_x, center_y = project(CENTER_LAT, CENTER_LON)
+        pin_radius = 22
+        draw.ellipse((center_x - pin_radius, center_y - pin_radius, center_x + pin_radius, center_y + pin_radius), fill=style["pin_bg"], outline=style["pin_fg"], width=4)
+        draw.ellipse((center_x - 7, center_y - 7, center_x + 7, center_y + 7), fill=style["pin_fg"])
 
-    label_font = load_font(33, bold=True)
-    label = "923 N DANIEL"
-    box = draw.textbbox((0, 0), label, font=label_font)
-    label_width = box[2] - box[0]
-    label_height = box[3] - box[1]
-    label_x = min(WIDTH - label_width - 35, center_x + 36)
-    label_y = center_y - label_height // 2
-    draw.rounded_rectangle((label_x - 14, label_y - 9, label_x + label_width + 14, label_y + label_height + 11), radius=14, fill=style["pin_bg"], outline=style["pin_fg"], width=3)
-    draw.text((label_x, label_y), label, fill=style["pin_fg"], font=label_font)
+        label_font = load_font(33, bold=True)
+        label = "923 N DANIEL"
+        box = draw.textbbox((0, 0), label, font=label_font)
+        label_width = box[2] - box[0]
+        label_height = box[3] - box[1]
+        label_x = min(WIDTH - label_width - 35, center_x + 36)
+        label_y = center_y - label_height // 2
+        draw.rounded_rectangle((label_x - 14, label_y - 9, label_x + label_width + 14, label_y + label_height + 11), radius=14, fill=style["pin_bg"], outline=style["pin_fg"], width=3)
+        draw.text((label_x, label_y), label, fill=style["pin_fg"], font=label_font)
 
-    attribution_font = load_font(17, bold=False)
-    attribution = "© OpenStreetMap contributors"
-    attr_box = draw.textbbox((0, 0), attribution, font=attribution_font)
-    attr_width = attr_box[2] - attr_box[0]
-    draw.rounded_rectangle((WIDTH - attr_width - 34, HEIGHT - 36, WIDTH - 10, HEIGHT - 9), radius=8, fill=style["pin_bg"])
-    draw.text((WIDTH - attr_width - 22, HEIGHT - 33), attribution, fill=style["pin_fg"], font=attribution_font)
+    if show_attribution:
+        attribution_font = load_font(17, bold=False)
+        attribution = "© OpenStreetMap contributors"
+        attr_box = draw.textbbox((0, 0), attribution, font=attribution_font)
+        attr_width = attr_box[2] - attr_box[0]
+        draw.rounded_rectangle((WIDTH - attr_width - 34, HEIGHT - 36, WIDTH - 10, HEIGHT - 9), radius=8, fill=style["pin_bg"])
+        draw.text((WIDTH - attr_width - 22, HEIGHT - 33), attribution, fill=style["pin_fg"], font=attribution_font)
 
     if style.get("vignette"):
         vignette = Image.new("L", image.size, 0)
@@ -403,38 +413,53 @@ def make_car_overlay(data):
             break
 
     durations = (14, 18, 21, 16, 24, 19, 27)
-    starts = (-2, -9, -15, -6, -18, -4, -12)
     defs = []
     cars = []
     for index, (_, points, _) in enumerate(selected, 1):
         route_points = list(reversed(points)) if index % 2 == 0 else points
         path_data = "M " + " L ".join(f"{x},{y}" for x, y in route_points)
         defs.append(f'<path id="car-route-{index}" d="{path_data}"/>')
-        cars.append(f'''\
-  <g class="map-car map-car-{index}">
+    for wave in range(3):
+        for route_index, _ in enumerate(selected, 1):
+            rank = wave * len(selected) + route_index
+            base_duration = durations[route_index - 1] + wave * 1.5
+            start = -(wave * base_duration / 3 + route_index * 1.7)
+            cars.append(f'''\
+  <g class="map-car map-car-{rank}" data-traffic-rank="{rank}" data-base-duration="{base_duration}">
     <g transform="translate(-18 -8)">
-      <rect x="1" y="1" width="34" height="14" rx="6" fill="#ffffff" stroke="#080808" stroke-width="2"/>
-      <rect x="10" y="3" width="15" height="10" rx="3" fill="#111111"/>
-      <rect x="4" y="13" width="7" height="3" rx="1.5" fill="#080808"/>
-      <rect x="25" y="13" width="7" height="3" rx="1.5" fill="#080808"/>
-      <circle cx="33" cy="4" r="1.5" fill="#ffffff" stroke="#080808" stroke-width="1"/>
-      <circle cx="33" cy="12" r="1.5" fill="#ffffff" stroke="#080808" stroke-width="1"/>
+      <rect x="1" y="1" width="34" height="14" rx="6" fill="#0A84FF" stroke="#031528" stroke-width="2"/>
+      <rect x="10" y="3" width="15" height="10" rx="3" fill="#DFF1FF"/>
+      <rect x="4" y="13" width="7" height="3" rx="1.5" fill="#031528"/>
+      <rect x="25" y="13" width="7" height="3" rx="1.5" fill="#031528"/>
+      <circle cx="33" cy="4" r="1.5" fill="#ffffff"/>
+      <circle cx="33" cy="12" r="1.5" fill="#ffffff"/>
     </g>
-    <animateMotion dur="{durations[index - 1]}s" begin="{starts[index - 1]}s" repeatCount="indefinite" rotate="auto" calcMode="linear">
-      <mpath href="#car-route-{index}"/>
+    <animateMotion dur="{base_duration}s" begin="{start:.1f}s" repeatCount="indefinite" rotate="auto" calcMode="linear">
+      <mpath href="#car-route-{route_index}"/>
     </animateMotion>
   </g>''')
+
+    center_x, center_y = project(CENTER_LAT, CENTER_LON)
+    home_marker = f'''\
+  <g class="map-home-marker" transform="translate({center_x} {center_y})" filter="url(#home-shadow)">
+    <circle r="30" fill="#0A84FF" stroke="#ffffff" stroke-width="5"/>
+    <path d="M -16,1 L 0,-14 L 16,1 V 18 H 5 V 7 H -5 V 18 H -16 Z" fill="#ffffff" stroke="#031528" stroke-width="2" stroke-linejoin="round"/>
+  </g>'''
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <filter id="car-shadow" x="-50%" y="-100%" width="200%" height="300%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0A84FF" flood-opacity="0.72"/>
+    </filter>
+    <filter id="home-shadow" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#001b36" flood-opacity="0.55"/>
     </filter>
     {''.join(defs)}
   </defs>
   <g filter="url(#car-shadow)">
 {''.join(cars)}
   </g>
+{home_marker}
 </svg>
 '''
     (ROOT / "map-cars.svg").write_text(svg, encoding="utf-8")
@@ -446,7 +471,15 @@ def main():
     files = [render_map(data, style, index) for index, style in enumerate(STYLES, 1)]
     make_contact_sheets(files)
     make_car_overlay(data)
-    render_map(data, STYLES[1], 2, show_option_label=False, output_path=ROOT / "map-fallback.png")
+    render_map(
+        data,
+        STYLES[1],
+        2,
+        show_option_label=False,
+        show_address_marker=False,
+        show_attribution=False,
+        output_path=ROOT / "map-fallback.png",
+    )
     print(f"Rendered {len(files)} non-AI map options to {OUTPUT_DIR}")
 
 

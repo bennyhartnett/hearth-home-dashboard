@@ -21,6 +21,7 @@ execFileSync(process.execPath, ["--check", appPath], { stdio: "pipe" });
 const app = read("app.js");
 const index = read("index.html");
 const mapCars = read("map-cars.svg");
+const styles = read("styles.css");
 
 const appBuild = app.match(/const BUILD_VERSION = "([^"]+)"/)?.[1];
 const indexBuild = index.match(/<meta name="custom-display-build" content="([^"]+)">/)?.[1];
@@ -43,10 +44,18 @@ assert(!app.includes("tile.openstreetmap.org"), "The map must not request OpenSt
 assert(!index.includes("leaflet"), "The static map must not load Leaflet assets.");
 assert(fs.existsSync(path.join(root, "map-fallback.png")), "Missing bundled map fallback image.");
 assert(fs.existsSync(path.join(root, "map-cars.svg")), "Missing animated map car overlay.");
-assert(index.includes('class="map-car-overlay"'), "Map must include the animated car overlay.");
-assert(index.includes('map-cars.svg?v=' + indexBuild), "Animated map car overlay must use the current build version.");
-assert((mapCars.match(/<animateMotion\b/g) || []).length >= 5, "Map must animate multiple cars along road paths.");
+assert(index.includes('id="mapTrafficLayer"'), "Map must include the live traffic overlay host.");
+assert(app.includes('./map-cars.svg?v=${BUILD_VERSION}'), "Animated map car overlay must use the current build version.");
+assert((mapCars.match(/<animateMotion\b/g) || []).length >= 18, "Map must animate prevalent traffic along road paths.");
 assert(mapCars.includes('repeatCount="indefinite"'), "Map car animations must loop continuously.");
+assert(mapCars.includes("#0A84FF"), "Map cars must use electric blue.");
+assert(mapCars.includes('class="map-home-marker"'), "Map must use a home icon at the address.");
+assert(!mapCars.includes("923 N DANIEL"), "Map overlay must not show address text.");
+assert(!styles.includes(".map-panel::after"), "Map must not show a corner label or credit.");
+assert(index.includes("OpenStreetMap contributors"), "OpenStreetMap attribution must remain available in Settings.");
+assert(app.includes("VDOT_TRAFFIC_TOKEN_URL"), "Map must load current VDOT traffic data.");
+assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refresh on a schedule.");
+assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
 
 [
   "Weather unavailable",

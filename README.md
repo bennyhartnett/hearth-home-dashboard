@@ -14,7 +14,7 @@ The page is intentionally safe for a public repo:
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
 - Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
-- A bundled Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with an animated SVG traffic layer and no recurring tile or map-API dependency.
+- A bundled Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with electric-blue cars whose density and pace follow the current VDOT 511 traffic-speed layer.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
@@ -27,7 +27,7 @@ The page is intentionally safe for a public repo:
 
 This dashboard does not use fallback sample values. If a live source is temporarily offline, rate-limited, lacks CORS support, or requires configuration, the card keeps its last good data when it has one and otherwise shows a calm updating state.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. The neighborhood map is a bundled image based on OpenStreetMap geometry, so it never requests external map tiles or displays a map-provider API error. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. The neighborhood map is a bundled image based on OpenStreetMap geometry, so it never requests external map tiles or displays a map-provider API error. Its car layer samples one VDOT 511/INRIX traffic tile every two minutes, caches the last result, and uses that result to vary both car count and animation speed. OpenStreetMap attribution remains available in Settings instead of covering the map. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
 
 ## Configure On The Custom Display
 
