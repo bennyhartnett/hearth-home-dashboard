@@ -422,17 +422,18 @@ def make_car_overlay(data):
     for wave in range(3):
         for route_index, _ in enumerate(selected, 1):
             rank = wave * len(selected) + route_index
-            base_duration = durations[route_index - 1] + wave * 1.5
+            # Every car on the same road keeps the same speed and an exact
+            # one-third-lap offset, so faster cars can never catch slower ones.
+            base_duration = durations[route_index - 1]
             start = -(wave * base_duration / 3 + route_index * 1.7)
             cars.append(f'''\
   <g class="map-car map-car-{rank}" data-traffic-rank="{rank}" data-base-duration="{base_duration}">
     <g transform="translate(-18 -8)">
-      <rect x="1" y="1" width="34" height="14" rx="6" fill="#0A84FF" stroke="#031528" stroke-width="2"/>
-      <rect x="10" y="3" width="15" height="10" rx="3" fill="#DFF1FF"/>
-      <rect x="4" y="13" width="7" height="3" rx="1.5" fill="#031528"/>
-      <rect x="25" y="13" width="7" height="3" rx="1.5" fill="#031528"/>
-      <circle cx="33" cy="4" r="1.5" fill="#ffffff"/>
-      <circle cx="33" cy="12" r="1.5" fill="#ffffff"/>
+      <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
+      <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="24" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
     <animateMotion dur="{base_duration}s" begin="{start:.1f}s" repeatCount="indefinite" rotate="auto" calcMode="linear">
       <mpath href="#car-route-{route_index}"/>

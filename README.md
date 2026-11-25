@@ -14,7 +14,7 @@ The page is intentionally safe for a public repo:
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
 - Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
-- A bundled Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with electric-blue cars whose density and pace follow the current VDOT 511 traffic-speed layer.
+- A clickable Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with collision-free electric-blue traffic whose density and pace follow the current VDOT 511 traffic-speed layer. Clicking the map inverts its black and white base without recoloring the cars or home icon.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.

@@ -101,11 +101,23 @@ body[data-theme="light"]::before {
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   position: relative;
-  background: #f5f5f2 url("./map-fallback.png?v=65") center / cover no-repeat;
+  isolation: isolate;
+  background: #f5f5f2;
+  cursor: pointer;
 }
 
-body[data-theme="light"] .map-panel {
-  background: #f5f5f2 url("./map-fallback.png?v=65") center / cover no-repeat;
+.map-panel::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: #f5f5f2 url("./map-fallback.png?v=66") center / cover no-repeat;
+  transition: filter 220ms ease;
+}
+
+.map-panel:focus-visible {
+  outline: 3px solid #0a84ff;
+  outline-offset: 3px;
 }
 
 .map-car-overlay {
@@ -128,8 +140,16 @@ body[data-theme="light"] .map-panel {
   display: none !important;
 }
 
-.map-panel[data-map-theme="light"] {
+.map-panel[data-map-theme="light"]::before {
   filter: brightness(1.12) saturate(0.86);
+}
+
+.map-panel[data-map-inverted="true"]::before {
+  filter: invert(1);
+}
+
+.map-panel[data-map-theme="light"][data-map-inverted="true"]::before {
+  filter: invert(1) brightness(1.12) saturate(0.86);
 }
 
 /* Dashboard layout (designed for portrait 1080x1920) ----------------- */

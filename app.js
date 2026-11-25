@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "65";
+const BUILD_VERSION = "66";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -68,6 +68,7 @@ const VDOT_TRAFFIC_LAYER_URL = "https://511.vdot.virginia.gov/services/511/map/l
 const MAP_TRAFFIC_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 const MAP_TRAFFIC_TILE_ZOOM = 14;
 const MAP_TRAFFIC_CACHE_KEY = "custom-display-map-traffic-v1";
+const MAP_INVERSION_KEY = "custom-display-map-inverted-v1";
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -153,6 +154,7 @@ let trafficRefreshTimer = null;
 let trafficLayerConfig = null;
 let trafficToken = null;
 let lastTrafficUpdateAt = 0;
+let trafficCollisionTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -748,6 +750,42 @@ function initMap() {
   setMapStyle();
 }
 
+function setMapInverted(inverted) {
+  const panel = $("map");
+  if (!panel) return;
+  panel.dataset.mapInverted = inverted ? "true" : "false";
+  panel.setAttribute("aria-pressed", inverted ? "true" : "false");
+  try {
+    localStorage.setItem(MAP_INVERSION_KEY, JSON.stringify(Boolean(inverted)));
+  } catch {
+    /* Storage may be unavailable in kiosk privacy modes. */
+  }
+}
+
+function toggleMapInversion() {
+  const panel = $("map");
+  if (!panel) return;
+  setMapInverted(panel.dataset.mapInverted !== "true");
+}
+
+function wireMapInversion() {
+  const panel = $("map");
+  if (!panel) return;
+  let inverted = false;
+  try {
+    inverted = JSON.parse(localStorage.getItem(MAP_INVERSION_KEY)) === true;
+  } catch {
+    inverted = false;
+  }
+  setMapInverted(inverted);
+  panel.addEventListener("click", toggleMapInversion);
+  panel.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleMapInversion();
+  });
+}
+
 function mapTrafficTile(lat, lon, zoom) {
   const scale = 2 ** zoom;
   const x = Math.floor(((lon + 180) / 360) * scale);
@@ -909,7 +947,41 @@ function applyMapTrafficState(state, source) {
   panel.dataset.trafficSource = source;
   panel.dataset.trafficLevel = level;
   panel.dataset.trafficCars = String(Math.min(count, cars.length || count));
-  panel.setAttribute("aria-label", `923 North Daniel Street map with ${level} live traffic`);
+  panel.setAttribute("aria-label", `923 North Daniel Street map with ${level} live traffic; activate to invert black and white`);
+}
+
+function preventMapCarOverlaps() {
+  const host = $("mapTrafficLayer");
+  if (!host) return;
+  clearInterval(trafficCollisionTimer);
+
+  const resolveCollisions = () => {
+    const cars = [...host.querySelectorAll(".map-car")].filter((car) => car.style.display !== "none");
+    cars.forEach((car) => {
+      car.style.visibility = "visible";
+    });
+
+    const occupied = [];
+    cars.forEach((car) => {
+      const bounds = car.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const padding = 4;
+      const overlaps = occupied.some((other) => !(
+        bounds.right + padding <= other.left
+        || bounds.left - padding >= other.right
+        || bounds.bottom + padding <= other.top
+        || bounds.top - padding >= other.bottom
+      ));
+      if (overlaps) {
+        car.style.visibility = "hidden";
+      } else {
+        occupied.push(bounds);
+      }
+    });
+  };
+
+  resolveCollisions();
+  trafficCollisionTimer = setInterval(resolveCollisions, 80);
 }
 
 async function updateMapTraffic() {
@@ -937,6 +1009,7 @@ async function initializeMapTraffic() {
 
   const cached = loadCachedMapTraffic();
   applyMapTrafficState(cached || { count: 13, speedFactor: 1, level: "updating" }, cached ? "cached" : "fallback");
+  preventMapCarOverlaps();
   updateMapTraffic();
   clearInterval(trafficRefreshTimer);
   trafficRefreshTimer = setInterval(updateMapTraffic, MAP_TRAFFIC_REFRESH_INTERVAL_MS);
@@ -2292,6 +2365,7 @@ updateClock();
 updateNetworkStatus();
 setInterval(updateClock, 1000);
 setInterval(updateNetworkStatus, 30 * 1000);
+wireMapInversion();
 initMap();
 initializeMapTraffic();
 scheduleRefresh();

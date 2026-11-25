@@ -49,6 +49,16 @@ assert(app.includes('./map-cars.svg?v=${BUILD_VERSION}'), "Animated map car over
 assert((mapCars.match(/<animateMotion\b/g) || []).length >= 18, "Map must animate prevalent traffic along road paths.");
 assert(mapCars.includes('repeatCount="indefinite"'), "Map car animations must loop continuously.");
 assert(mapCars.includes("#0A84FF"), "Map cars must use electric blue.");
+const carLayer = mapCars.match(/<g filter="url\(#car-shadow\)">([\s\S]*?)<\/g>\s*<g class="map-home-marker"/)?.[1] || "";
+assert(carLayer && !/#ffffff|#DFF1FF|#031528/i.test(carLayer), "Map cars must be electric blue with no white or dark details.");
+const carDurations = [...mapCars.matchAll(/data-traffic-rank="(\d+)" data-base-duration="([\d.]+)"/g)];
+const durationsByRoute = new Map();
+carDurations.forEach(([, rankText, duration]) => {
+  const route = (Number(rankText) - 1) % 7;
+  if (!durationsByRoute.has(route)) durationsByRoute.set(route, new Set());
+  durationsByRoute.get(route).add(duration);
+});
+assert([...durationsByRoute.values()].every((durations) => durations.size === 1), "Cars sharing a road must keep the same speed.");
 assert(mapCars.includes('class="map-home-marker"'), "Map must use a home icon at the address.");
 assert(!mapCars.includes("923 N DANIEL"), "Map overlay must not show address text.");
 assert(!styles.includes(".map-panel::after"), "Map must not show a corner label or credit.");
@@ -56,6 +66,9 @@ assert(index.includes("OpenStreetMap contributors"), "OpenStreetMap attribution 
 assert(app.includes("VDOT_TRAFFIC_TOKEN_URL"), "Map must load current VDOT traffic data.");
 assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refresh on a schedule.");
 assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
+assert(app.includes("preventMapCarOverlaps"), "Map must suppress cars when their bounds would overlap.");
+assert(index.includes('role="button"') && index.includes('aria-pressed="false"'), "Map must expose its inversion control.");
+assert(styles.includes('[data-map-inverted="true"]::before'), "Map must invert only its black-and-white base layer.");
 
 [
   "Weather unavailable",
