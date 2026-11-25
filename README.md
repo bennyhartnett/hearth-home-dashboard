@@ -14,7 +14,7 @@ The page is intentionally safe for a public repo:
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
 - Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
-- A bundled black-and-white map of 923 N Daniel and its real surrounding street layout, with no external tile or map-API dependency.
+- A bundled Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with an animated SVG traffic layer and no recurring tile or map-API dependency.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
