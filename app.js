@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "72";
+const BUILD_VERSION = "73";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -1246,8 +1246,12 @@ function startMapCarAnimation() {
       || Math.hypot(left.x - 1200, left.y - 400) - Math.hypot(right.x - 1200, right.y - 400))
     .slice(0, 10)
     .map((control, id) => ({ ...control, id }));
-  const collisionRoutePairs = new Set(intersectionConflicts.map((control) =>
-    [control.aRoute, control.bRoute].sort((a, b) => a - b).join(":")));
+  const collisionConflictsByPair = new Map();
+  intersectionConflicts.forEach((control) => {
+    const key = [control.aRoute, control.bRoute].sort((a, b) => a - b).join(":");
+    if (!collisionConflictsByPair.has(key)) collisionConflictsByPair.set(key, []);
+    collisionConflictsByPair.get(key).push(control);
+  });
   $("map")?.setAttribute("data-intersection-controls", String(mapTrafficIntersections.length));
 
   const routePoint = (state, distance) => {
@@ -1341,7 +1345,17 @@ function startMapCarAnimation() {
           continue;
         }
         const routePair = [a.state.route, b.state.route].sort((left, right) => left - right).join(":");
-        if (!collisionRoutePairs.has(routePair)) continue;
+        const pairConflicts = collisionConflictsByPair.get(routePair) || [];
+        const nearSharedConflict = pairConflicts.some((control) => {
+          const aConflictDistance = control.aRoute === a.state.route ? control.aDistance : control.bDistance;
+          const bConflictDistance = control.aRoute === b.state.route ? control.aDistance : control.bDistance;
+          const aDelta = Math.abs(a.state.distance - aConflictDistance);
+          const bDelta = Math.abs(b.state.distance - bConflictDistance);
+          const aNear = Math.min(aDelta, a.state.length - aDelta) < 130;
+          const bNear = Math.min(bDelta, b.state.length - bDelta) < 130;
+          return aNear && bNear;
+        });
+        if (!nearSharedConflict) continue;
         const aBlocked = blocked.has(a.state);
         const bBlocked = blocked.has(b.state);
         const aPoint = aBlocked ? routePoint(a.state, a.state.distance) : a.point;

@@ -84,7 +84,7 @@ assert(app.includes("currentTrafficRouteStates"), "Map must derive yellow and re
 assert(app.includes("trafficDemandCount"), "Traffic density must be independent from congestion color.");
 assert(app.includes("stabilizeTrafficRouteStates"), "Traffic colors must be stabilized across consecutive readings.");
 assert(app.includes("data-signal-phase"), "Intersections must use alternating right-of-way phases.");
-assert(app.includes("collisionRoutePairs") && app.includes("MAP_CAR_COLLISION_DISTANCE"), "Crossing routes must reserve collision-free intersection space.");
+assert(app.includes("collisionConflictsByPair") && app.includes("nearSharedConflict") && app.includes("MAP_CAR_COLLISION_DISTANCE"), "Crossing routes must reserve collision-free intersection space only near their shared junction.");
 assert(!app.includes("visibility = \"hidden\""), "Map cars must never disappear to avoid a collision.");
 assert(app.includes("wantsActive") && app.includes("const offscreen"), "Traffic density changes must occur only beyond the map edge.");
 assert(!read("scripts/render_map_options.py").includes("extend_route_offscreen"), "Car paths must never use artificial off-road extensions.");
