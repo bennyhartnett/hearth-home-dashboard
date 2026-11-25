@@ -47,12 +47,14 @@ assert(fs.existsSync(path.join(root, "map-cars.svg")), "Missing animated map car
 assert(index.includes('id="mapBaseImage"') && index.includes('map-fallback.png?v=' + indexBuild), "Map must render its base as a versioned image element.");
 assert(index.includes('id="mapTrafficLayer"'), "Map must include the live traffic overlay host.");
 assert(app.includes('./map-cars.svg?v=${BUILD_VERSION}'), "Animated map car overlay must use the current build version.");
-assert((mapCars.match(/<animateMotion\b/g) || []).length >= 18, "Map must animate prevalent traffic along road paths.");
-assert(mapCars.includes('repeatCount="indefinite"'), "Map car animations must loop continuously.");
+assert((mapCars.match(/class="map-car map-car-/g) || []).length >= 18, "Map must include prevalent traffic along road paths.");
+assert(!mapCars.includes("<animateMotion"), "Map cars must use collision-aware JavaScript motion instead of blinking SVG loops.");
+assert(mapCars.includes('data-phase="') && mapCars.includes('data-route="'), "Map cars must preserve continuous route position data.");
 assert(mapCars.includes("#0A84FF"), "Map cars must use electric blue.");
-const carLayer = mapCars.match(/<g filter="url\(#car-shadow\)">([\s\S]*?)<\/g>\s*<g class="map-home-marker"/)?.[1] || "";
+assert(mapCars.includes("#FF2D2D") && mapCars.includes("car-shadow-red"), "Map must support red cars on congested roads.");
+const carLayer = mapCars.split("</defs>")[1]?.split('<g class="map-home-marker"')[0] || "";
 assert(carLayer && !/#ffffff|#DFF1FF|#031528/i.test(carLayer), "Map cars must be electric blue with no white or dark details.");
-const carDurations = [...mapCars.matchAll(/data-traffic-rank="(\d+)" data-base-duration="([\d.]+)"/g)];
+const carDurations = [...mapCars.matchAll(/data-traffic-rank="(\d+)"[^>]*data-base-duration="([\d.]+)"/g)];
 const durationsByRoute = new Map();
 carDurations.forEach(([, rankText, duration]) => {
   const route = (Number(rankText) - 1) % 7;
@@ -67,7 +69,9 @@ assert(index.includes("OpenStreetMap contributors"), "OpenStreetMap attribution 
 assert(app.includes("VDOT_TRAFFIC_TOKEN_URL"), "Map must load current VDOT traffic data.");
 assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refresh on a schedule.");
 assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
-assert(app.includes("preventMapCarOverlaps"), "Map must suppress cars when their bounds would overlap.");
+assert(app.includes("startMapCarAnimation"), "Map must use continuous collision-aware car motion.");
+assert(app.includes("currentRedTrafficRoutes"), "Map must derive red cars from live road-level traffic.");
+assert(!app.includes("visibility = \"hidden\""), "Map cars must never disappear to avoid a collision.");
 assert(index.includes('role="button"') && index.includes('aria-pressed="false"'), "Map must expose its inversion control.");
 assert(styles.includes('[data-map-inverted="true"] .map-base-image'), "Map must invert only its black-and-white base image.");
 
