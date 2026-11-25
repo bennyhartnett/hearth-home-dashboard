@@ -101,15 +101,15 @@ body[data-theme="light"]::before {
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   position: relative;
-  background: #16242a url("./map-fallback.png?v=62") center / cover no-repeat;
+  background: #16242a url("./map-fallback.png?v=63") center / cover no-repeat;
 }
 
 body[data-theme="light"] .map-panel {
-  background: #16242a url("./map-fallback.png?v=62") center / cover no-repeat;
+  background: #16242a url("./map-fallback.png?v=63") center / cover no-repeat;
 }
 
 .map-panel::after {
-  content: "Neighborhood";
+  content: "923 N Daniel · © OpenStreetMap contributors";
   position: absolute;
   right: 12px;
   bottom: 10px;
@@ -121,6 +121,10 @@ body[data-theme="light"] .map-panel {
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.card[hidden] {
+  display: none !important;
 }
 
 .map-panel[data-map-theme="light"] {

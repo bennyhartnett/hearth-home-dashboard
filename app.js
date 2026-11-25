@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "62";
+const BUILD_VERSION = "63";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -55,8 +55,6 @@ const LEGACY_STORAGE_KEYS = Object.freeze({
 const MIN_REFRESH_MINUTES = 5;
 const OSRM_REQUEST_SPACING_MS = 1100;
 const WMATA_GUEST_API_KEY = "e13626d03d8e4c03ac07f95541b3091b";
-const METRO_PERSONAL_REFRESH_INTERVAL_MS = 30 * 1000;
-const METRO_GUEST_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const METRO_REFERENCE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const OVERPASS_API_URL = "https://overpass-api.de/api/interpreter";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
@@ -127,7 +125,6 @@ applySettingsFromUrl();
 let liveCache = loadLiveCache();
 let currentLocation = null;
 let refreshTimer = null;
-let metroTimer = null;
 let themeTransitionTimer = null;
 let map = null;
 let layers = {};
@@ -1914,9 +1911,7 @@ async function refreshAll() {
 
   if (!currentLocation) {
     setEmpty("driveList", "Waiting for location.");
-    setEmpty("metroList", settings.wmataKey ? "Waiting for refresh." : "Add a WMATA API key in settings.");
     setEmpty("mobilityList", "Waiting for location.");
-    setEmpty("restaurantList", "Waiting for location.");
     return;
   }
 
@@ -1927,14 +1922,8 @@ async function refreshAll() {
     updateDriveTimes(currentLocation).catch(() => {
       if (!restoreCachedDriveTimes()) setEmpty("driveList", "Updating drive times.");
     }),
-    updateMetro().catch(() => {
-      if (!restoreCachedMetro()) setEmpty("metroList", "Updating train arrivals.");
-    }),
     updateMobility(currentLocation).catch(() => {
       if (!restoreCachedMobility()) setEmpty("mobilityList", "Updating bikes and scooters.");
-    }),
-    updateRestaurants(currentLocation).catch(() => {
-      if (!restoreCachedRestaurants()) setEmpty("restaurantList", "Updating open nearby.");
     })
   ];
 
@@ -2011,7 +2000,6 @@ function wireSettings() {
 
 function scheduleRefresh() {
   clearInterval(refreshTimer);
-  clearInterval(metroTimer);
   refreshTimer = setInterval(() => {
     if (currentLocation?.source === "browser") {
       requestLocation({ forceBrowser: true });
@@ -2020,14 +2008,6 @@ function scheduleRefresh() {
     }
   }, effectiveRefreshMinutes() * 60 * 1000);
 
-  /* Personal keys get full live-map updates; the shared guest feed is intentionally slower. */
-  metroTimer = setInterval(() => {
-    updateMetro().catch(() => {
-      if (!restoreCachedMetro()) setEmpty("metroList", "Updating train arrivals.");
-    });
-  }, String(settings.wmataKey || "").trim()
-    ? METRO_PERSONAL_REFRESH_INTERVAL_MS
-    : METRO_GUEST_REFRESH_INTERVAL_MS);
 }
 
 function isMapInteractionTarget(target) {

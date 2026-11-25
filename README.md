@@ -6,7 +6,6 @@ The page is intentionally safe for a public repo:
 
 - No API keys are required for the weather card.
 - No device ADB details are stored here.
-- The optional personal WMATA key is entered in the browser UI and stays in that device's local storage.
 - No device location, local network URLs, pairing codes, or private tokens are committed.
 
 ## What It Shows
@@ -15,13 +14,11 @@ The page is intentionally safe for a public repo:
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
 - Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
-- Bundled neighborhood-map artwork that follows the page's map-theme setting without external tile requests.
-- Bundled decorative neighborhood map with no external tile or map-API dependency.
+- A bundled black-and-white map of 923 N Daniel and its real surrounding street layout, with no external tile or map-API dependency.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
-- Clarendon Station arrivals through WMATA's shared guest feed, with faster refreshes when a personal key is configured.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
-- Restaurants within 1.5 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass, with details for hours, phone, address, and website when OSM has them.
+- Metro and Open Nearby are hidden while those integrations are out of service.
 - Auto light/dark mode that switches at sunrise and sunset, plus manual light/dark settings.
 - Page permission prompts for location, camera, microphone, notifications, persistent storage, fullscreen, and screen wake lock.
 - A kiosk-friendly portrait layout for a 1080x1920 display.
@@ -30,7 +27,7 @@ The page is intentionally safe for a public repo:
 
 This dashboard does not use fallback sample values. If a live source is temporarily offline, rate-limited, lacks CORS support, or requires configuration, the card keeps its last good data when it has one and otherwise shows a calm updating state.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. Basic Metro arrivals use WMATA's rate-limited public guest key; enter a personal WMATA key to enable 30-second refreshes. The neighborhood map is a bundled decorative image, so it never requests external map tiles or displays a map-provider API error. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. The neighborhood map is a bundled image based on OpenStreetMap geometry, so it never requests external map tiles or displays a map-provider API error. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
 
 ## Configure On The Custom Display
 
@@ -41,7 +38,6 @@ Open the dashboard, tap the gear button, and set:
 - Refresh interval
 - Mobility radius
 - Optional fallback latitude and longitude
-- Optional WMATA API key
 - Optional photo URL override; leave it empty to use automatic weather/time scenes
 
 Those settings are stored in the display browser's local storage, not in this public repository.
@@ -62,11 +58,9 @@ The dashboard enforces a minimum 5-minute general refresh and keeps provider-spe
 
 - Open-Meteo weather and air quality: 2 calls every 5 minutes, about 576/day, below the free non-commercial limit of 10,000/day, 5,000/hour, and 600/minute.
 - OSRM demo routing: 8 route calls every 5 minutes, paced one at a time with a 1.1-second delay, under the 1 request/second demo-server policy.
-- WMATA: the shared guest feed is limited to station predictions every 5 minutes; a personal key enables 30-second arrival and train-position refreshes, while station and route reference data is cached locally for 7 days.
 - CityBikes: 1 Capital Bikeshare request every 5 minutes, about 12/hour, below the 300/hour public API limit.
 - Lime GBFS through the CORS proxy: 1 request every 5 minutes, matching the GBFS expectation that near-realtime vehicle feeds be no more than 5 minutes stale.
-- Overpass: 1 open-nearby query every 5 minutes, about 288/day, well below the broad public-instance guideline of 10,000 requests/day and 1 GB/day.
-- The bundled map image makes no recurring network requests; the opening-hours parser remains the only map-adjacent CDN asset.
+- The bundled map image makes no recurring network requests.
 - GitHub Pages update check: 1 lightweight HTML check per minute, far below the 100 GB/month soft bandwidth limit for a single private kiosk display.
 
 ## Deploy Notes
