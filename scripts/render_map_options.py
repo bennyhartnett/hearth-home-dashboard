@@ -401,14 +401,26 @@ def make_car_overlay(data):
     candidates.sort(key=lambda road: (priority.get(road[0], 8), -road[2]))
     selected = []
     midpoints = []
+    selected_samples = []
     for highway, points, length in candidates:
         x, y, _ = point_on_polyline(points, 0.5)
         if not (0 <= x <= WIDTH and 0 <= y <= HEIGHT):
             continue
         if any(math.dist((x, y), midpoint) < 72 for midpoint in midpoints):
             continue
+        samples = [point_on_polyline(points, index / 24)[:2] for index in range(25)]
+        overlaps_existing_road = any(
+            sum(
+                1 for sample in samples
+                if min(math.dist(sample, other) for other in existing_samples) < 52
+            ) >= 3
+            for existing_samples in selected_samples
+        )
+        if overlaps_existing_road:
+            continue
         selected.append((highway, points, length))
         midpoints.append((x, y))
+        selected_samples.append(samples)
         if len(selected) == 21:
             break
 

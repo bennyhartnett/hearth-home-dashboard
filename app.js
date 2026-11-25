@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "69";
+const BUILD_VERSION = "70";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -1086,6 +1086,17 @@ function startMapCarAnimation() {
     const angle = Math.atan2(neighbor.y - point.y, neighbor.x - point.x) * 180 / Math.PI;
     return { x: point.x, y: point.y, angle };
   };
+  const occupiedStarts = [];
+  mapTrafficAnimationStates.filter((state) => state.active).forEach((state) => {
+    let point = routePoint(state, state.distance);
+    for (let attempt = 0; attempt < 32; attempt += 1) {
+      if (occupiedStarts.every((other) => Math.hypot(point.x - other.x, point.y - other.y) >= 96)) break;
+      state.distance = (state.distance + state.length * 0.137) % (state.length * 2);
+      point = routePoint(state, state.distance);
+    }
+    occupiedStarts.push(point);
+    state.car.setAttribute("transform", `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)}) rotate(${point.angle.toFixed(2)})`);
+  });
   let previousTime = performance.now();
 
   const animate = (time) => {
@@ -1103,7 +1114,7 @@ function startMapCarAnimation() {
       for (let second = first + 1; second < proposals.length; second += 1) {
         const a = proposals[first];
         const b = proposals[second];
-        if (Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y) < 58) {
+        if (Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y) < 96) {
           blocked.add(a.state.rank > b.state.rank ? a.state : b.state);
         }
       }
