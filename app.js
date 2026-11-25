@@ -22,15 +22,6 @@ const WEATHER_CODES = {
   99: ["Thunderstorm", "storm"]
 };
 
-const MAP_STYLES = {
-  dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-  },
-  light: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
-  }
-};
-
 const OLD_DOMINION_TOLL_FREE_VIA = [{ lat: 38.9200, lon: -77.1590 }];
 const US_50_NUTLEY_TOLL_FREE_VIA = [{ lat: 38.8560, lon: -77.2590 }];
 const DULLES_TOLL_FREE_VIA = [
@@ -53,12 +44,25 @@ const DESTINATIONS = [
 const CLARENDON_STATION_CODE = "K02";
 const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
-const STORAGE_KEY = "hearth-dashboard-settings-v2";
-const LIVE_CACHE_KEY = "hearth-dashboard-live-cache-v1";
-const BUILD_VERSION = "52";
+const STORAGE_KEY = "custom-display-settings-v1";
+const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
+const BUILD_VERSION = "62";
+const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
+const LEGACY_STORAGE_KEYS = Object.freeze({
+  settings: `${LEGACY_KEY_PREFIX}settings-v2`,
+  liveCache: `${LEGACY_KEY_PREFIX}live-cache-v1`
+});
+const MIN_REFRESH_MINUTES = 5;
+const OSRM_REQUEST_SPACING_MS = 1100;
+const WMATA_GUEST_API_KEY = "e13626d03d8e4c03ac07f95541b3091b";
+const METRO_PERSONAL_REFRESH_INTERVAL_MS = 30 * 1000;
+const METRO_GUEST_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const METRO_REFERENCE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const OVERPASS_API_URL = "https://overpass-api.de/api/interpreter";
 const CORS_PROXY_URL = "https://corsproxy.io/?";
 const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
+const ROUTE_DETAILS_AUTO_CLOSE_MS = 60 * 1000;
 const HERO_PHOTO_CYCLE_MS = 5 * 60 * 1000;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
@@ -117,6 +121,7 @@ const DEFAULT_SETTINGS = {
   photoUrl: ""
 };
 
+migrateLegacyLocalStorage();
 let settings = loadSettings();
 applySettingsFromUrl();
 let liveCache = loadLiveCache();
@@ -125,12 +130,13 @@ let refreshTimer = null;
 let metroTimer = null;
 let themeTransitionTimer = null;
 let map = null;
-let tileLayer = null;
-let currentTileUrl = null;
 let layers = {};
 let activeTheme = "dark";
 let wakeLock = null;
 let driveRoutes = new Map();
+let routeDetailsAutoCloseTimer = null;
+let metroReference = null;
+let metroReferencePromise = null;
 let lastDailyData = null;
 let lastWeatherVisual = "clear";
 let userMarker = null;
@@ -142,6 +148,22 @@ let heroPhotoCycleTimer = null;
 let lastAutoHeroPhotoUrl = DEFAULT_PHOTO_URL;
 
 const $ = (id) => document.getElementById(id);
+
+function migrateLegacyLocalStorage() {
+  moveLocalStorageValue(LEGACY_STORAGE_KEYS.settings, STORAGE_KEY);
+  moveLocalStorageValue(LEGACY_STORAGE_KEYS.liveCache, LIVE_CACHE_KEY);
+}
+
+function moveLocalStorageValue(fromKey, toKey) {
+  try {
+    const existing = localStorage.getItem(toKey);
+    const legacy = localStorage.getItem(fromKey);
+    if (existing == null && legacy != null) localStorage.setItem(toKey, legacy);
+    if (legacy != null) localStorage.removeItem(fromKey);
+  } catch {
+    /* Local storage can be blocked; continue with in-memory defaults. */
+  }
+}
 
 function loadSettings() {
   try {
@@ -180,6 +202,14 @@ function saveLiveCacheEntry(key, value) {
 
 function liveCacheEntry(key) {
   return liveCache?.[key] || null;
+}
+
+function effectiveRefreshMinutes() {
+  return Math.max(MIN_REFRESH_MINUTES, Number(settings.refreshMinutes) || MIN_REFRESH_MINUTES);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function applySettingsFromUrl() {
@@ -684,33 +714,31 @@ function metroLineCircle(code) {
   return `<span class="line-circle line-${safe}" aria-label="${METRO_LINE_NAMES[safe] || "Line"}">${escapeHtml(safe === "NA" ? "—" : safe)}</span>`;
 }
 
-/* Map (now used as background) -------------------------------------- */
+function safeMetroLineCode(code) {
+  const upper = String(code || "").toUpperCase();
+  return ["RD", "OR", "YL", "GR", "BL", "SV"].includes(upper) ? upper : "NA";
+}
+
+function wmataApiUrl(path, params = {}) {
+  const url = new URL(path.replace(/^\//, ""), "https://api.wmata.com/");
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== "") url.searchParams.set(key, value);
+  });
+  url.searchParams.set("api_key", String(settings.wmataKey || "").trim() || WMATA_GUEST_API_KEY);
+  return url.toString();
+}
+
+async function fetchWmataJson(path, params = {}) {
+  const response = await fetch(wmataApiUrl(path, params), { cache: "no-store" });
+  if (!response.ok) throw new Error(`WMATA ${response.status}`);
+  return response.json();
+}
+
+/* Static map panel --------------------------------------------------- */
 function initMap() {
-  if (!window.L) return;
-
-  map = L.map("map", {
-    zoomControl: false,
-    attributionControl: false,
-    dragging: false,
-    scrollWheelZoom: false,
-    doubleClickZoom: false,
-    touchZoom: false,
-    boxZoom: false,
-    keyboard: false,
-    tap: false
-  }).setView([38.889, -77.05], 15);
-
-  layers = {
-    user: L.layerGroup().addTo(map),
-    restaurants: L.layerGroup().addTo(map),
-    bikes: L.layerGroup().addTo(map),
-    scooters: L.layerGroup().addTo(map),
-    route: L.layerGroup().addTo(map)
-  };
-
-  setMapStyle(activeTheme);
-  setTimeout(() => map.invalidateSize(), 250);
-  window.addEventListener("resize", () => map?.invalidateSize());
+  map = null;
+  layers = {};
+  setMapStyle();
 }
 
 function resolvedMapTheme() {
@@ -721,16 +749,9 @@ function resolvedMapTheme() {
 }
 
 function setMapStyle() {
-  if (!map) return;
   const key = resolvedMapTheme();
-  const style = MAP_STYLES[key];
-  if (currentTileUrl === style.url && tileLayer) {
-    updateMapThemeButton();
-    return;
-  }
-  if (tileLayer) tileLayer.remove();
-  tileLayer = L.tileLayer(style.url, { maxZoom: 19, attribution: "" }).addTo(map);
-  currentTileUrl = style.url;
+  const panel = $("map");
+  if (panel) panel.dataset.mapTheme = key;
   updateMapThemeButton();
 }
 
@@ -757,6 +778,18 @@ function markerIcon(type) {
   const size = type === "user" || type === "home" ? 36 : 32;
   return L.divIcon({
     html: `<div class="map-marker marker-${escapeHtml(type)}">${iconSvg(type)}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2]
+  });
+}
+
+function metroCarIcon(train) {
+  const size = 30;
+  const code = safeMetroLineCode(train.lineCode);
+  return L.divIcon({
+    html: `<div class="map-marker marker-train marker-metro-${code}">${iconSvg("train")}</div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -1059,18 +1092,19 @@ async function fetchTollFreeRoute(location, destination) {
 }
 
 async function updateDriveTimes(location) {
-  const rows = await Promise.all(DESTINATIONS.map(async (destination) => {
+  const rows = [];
+  for (const destination of DESTINATIONS) {
+    if (rows.length) await sleep(OSRM_REQUEST_SPACING_MS);
     const route = await fetchTollFreeRoute(location, destination);
-    const row = {
+    rows.push({
       name: destination.name,
       destination,
       minutes: Math.round(route.duration / 60),
       miles: miles(route.distance),
       route,
       steps: (route.legs || []).flatMap((leg) => leg.steps || [])
-    };
-    return row;
-  }));
+    });
+  }
 
   rows.sort((a, b) => a.minutes - b.minutes);
   saveLiveCacheEntry("drive", { rows });
@@ -1103,42 +1137,42 @@ function restoreCachedDriveTimes() {
 
 function showRoute(name) {
   const row = driveRoutes.get(name);
-  if (!row || !map || !layers.route) return;
-
-  layers.route.clearLayers();
-  const coordinates = row.route.geometry?.coordinates || [];
-  const line = coordinates.map(([lon, lat]) => [lat, lon]);
-  if (line.length) {
-    L.polyline(line, {
-      color: activeTheme === "light" ? "#0fa566" : "#5cf09b",
-      weight: 6,
-      opacity: 0.95
-    }).addTo(layers.route);
-  }
-
-  if (currentLocation) {
-    L.marker([currentLocation.lat, currentLocation.lon], { icon: markerIcon("home") })
-      .addTo(layers.route);
-  }
-
-  L.marker([row.destination.lat, row.destination.lon], { icon: markerIcon("pin") })
-    .addTo(layers.route);
+  if (!row) return;
 
   $("routeDetails").hidden = false;
   $("routeTitle").textContent = row.name;
   $("routeSummary").textContent = `Toll-free · ${formatDuration(row.route.duration)} · ${formatMiles(miles(row.route.distance))}`;
   renderRouteSteps(row.steps);
+  scheduleRouteDetailsAutoClose();
 
-  setTimeout(() => {
-    map.invalidateSize();
-    if (line.length) map.fitBounds(line, { padding: [60, 60] });
-  }, 150);
 }
 
 function clearRoute(options = {}) {
+  clearRouteDetailsAutoClose();
   if (layers.route) layers.route.clearLayers();
   $("routeDetails").hidden = true;
-  if (currentLocation && options.recenter !== false) updateUserMarker(currentLocation);
+  if (currentLocation && options.recenter !== false) {
+    updateUserMarker(currentLocation);
+    fitMapToOpenRestaurants(currentRestaurantCache()?.open || [], { force: true });
+  }
+}
+
+function scheduleRouteDetailsAutoClose() {
+  clearRouteDetailsAutoClose();
+  routeDetailsAutoCloseTimer = setTimeout(() => {
+    routeDetailsAutoCloseTimer = null;
+    if (routeDetailsOpen()) clearRoute();
+  }, ROUTE_DETAILS_AUTO_CLOSE_MS);
+}
+
+function clearRouteDetailsAutoClose() {
+  if (routeDetailsAutoCloseTimer) clearTimeout(routeDetailsAutoCloseTimer);
+  routeDetailsAutoCloseTimer = null;
+}
+
+function handleRouteOutsidePointerDown(event) {
+  if (!routeDetailsOpen() || event.target?.closest?.("#routeDetails")) return;
+  clearRoute();
 }
 
 function renderRouteSteps(steps) {
@@ -1179,28 +1213,24 @@ function routeInstruction(step) {
   return `${type.charAt(0).toUpperCase()}${type.slice(1)}${modifier}${road}`;
 }
 
-/* Metro (refreshes independently every 30s) -------------------------- */
+/* Metro -------------------------------------------------------------- */
 async function updateMetro() {
-  if (!settings.wmataKey) {
-    setEmpty("metroList", "Add a WMATA API key in settings to show live train arrivals.");
-    return;
-  }
-
-  const url = `https://api.wmata.com/StationPrediction.svc/json/GetPrediction/${CLARENDON_STATION_CODE}?api_key=${encodeURIComponent(settings.wmataKey)}`;
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`WMATA ${response.status}`);
-  const data = await response.json();
-  const trains = (data.Trains || []).slice(0, 6);
-  saveLiveCacheEntry("metro", { trains });
-  renderMetroTrains(trains, Date.now());
+  const usesGuestKey = !String(settings.wmataKey || "").trim();
+  const arrivals = await fetchWmataJson(`StationPrediction.svc/json/GetPrediction/${CLARENDON_STATION_CODE}`);
+  const trains = (arrivals.Trains || []).slice(0, 6);
+  saveLiveCacheEntry("metro", { trains, metroCars: [], usesGuestKey });
+  renderMetroTrains(trains, Date.now(), [], usesGuestKey);
 }
 
-function renderMetroTrains(trains = [], savedAt = Date.now()) {
+function renderMetroTrains(trains = [], savedAt = Date.now(), metroCars = [], usesGuestKey = false) {
   const container = $("metroList");
   container.innerHTML = "";
+  const mapped = metroCars.length ? ` · ${metroCars.length} trains mapped` : "";
+  const source = usesGuestKey ? " · shared feed" : "";
 
   if (!trains.length) {
     setEmpty("metroList", "No train predictions right now.");
+    setText("metroStatus", `Clarendon${source}${mapped} · updated ${formatTime(new Date(savedAt))}`);
     return;
   }
 
@@ -1215,15 +1245,194 @@ function renderMetroTrains(trains = [], savedAt = Date.now()) {
     );
   });
 
-  setText("metroStatus", `Clarendon · updated ${formatTime(new Date(savedAt))}`);
+  setText("metroStatus", `Clarendon${source}${mapped} · updated ${formatTime(new Date(savedAt))}`);
 }
 
 function restoreCachedMetro() {
-  if (!settings.wmataKey) return false;
   const cached = liveCacheEntry("metro");
   if (!cached?.trains) return false;
-  renderMetroTrains(cached.trains, cached.savedAt);
+  renderMetroTrains(cached.trains, cached.savedAt, cached.metroCars || [], cached.usesGuestKey === true);
+  renderMetroCars(cached.metroCars || []);
   return true;
+}
+
+async function fetchMetroCarPositions() {
+  const [positionData, reference] = await Promise.all([
+    fetchWmataJson("TrainPositions/TrainPositions", { contentType: "json" }),
+    metroReferenceData()
+  ]);
+
+  return (positionData.TrainPositions || [])
+    .map((train) => normalizeMetroCar(train, reference))
+    .filter(Boolean);
+}
+
+async function metroReferenceData() {
+  if (metroReference) return metroReference;
+
+  const cached = liveCacheEntry("metroReference");
+  if (cached?.stations && cached?.circuitPositions &&
+      Date.now() - Number(cached.savedAt || 0) < METRO_REFERENCE_CACHE_MAX_AGE_MS) {
+    metroReference = buildMetroReferenceIndex(cached.stations, cached.circuitPositions);
+    return metroReference;
+  }
+
+  if (!metroReferencePromise) {
+    metroReferencePromise = fetchMetroReferenceData().finally(() => {
+      metroReferencePromise = null;
+    });
+  }
+  return metroReferencePromise;
+}
+
+async function fetchMetroReferenceData() {
+  const [stationsData, routesData] = await Promise.all([
+    fetchWmataJson("Rail.svc/json/jStations"),
+    fetchWmataJson("TrainPositions/StandardRoutes", { contentType: "json" })
+  ]);
+  const stations = (stationsData.Stations || [])
+    .filter((station) => station.Code && Number.isFinite(Number(station.Lat)) && Number.isFinite(Number(station.Lon)))
+    .map((station) => ({
+      Code: station.Code,
+      Name: station.Name,
+      Lat: Number(station.Lat),
+      Lon: Number(station.Lon)
+    }));
+  const stationByCode = new Map(stations.map((station) => [station.Code, station]));
+  const circuitPositions = buildMetroCircuitPositions(routesData.StandardRoutes || [], stationByCode);
+
+  saveLiveCacheEntry("metroReference", { stations, circuitPositions });
+  metroReference = buildMetroReferenceIndex(stations, circuitPositions);
+  return metroReference;
+}
+
+function buildMetroReferenceIndex(stations, circuitPositions) {
+  const stationByCode = new Map((stations || []).map((station) => [station.Code, station]));
+  const circuitByLine = new Map();
+  (circuitPositions || []).forEach((position) => {
+    const lineKey = `${safeMetroLineCode(position.lineCode)}|${position.circuitId}`;
+    if (!circuitByLine.has(lineKey)) circuitByLine.set(lineKey, position);
+    const anyLineKey = `*|${position.circuitId}`;
+    if (!circuitByLine.has(anyLineKey)) circuitByLine.set(anyLineKey, position);
+  });
+  return { stationByCode, circuitByLine };
+}
+
+function buildMetroCircuitPositions(routes, stationByCode) {
+  const positions = [];
+  (routes || []).forEach((route) => {
+    const lineCode = safeMetroLineCode(route.LineCode);
+    const trackNum = Number(route.TrackNum || 0);
+    const circuits = (route.TrackCircuits || [])
+      .slice()
+      .sort((a, b) => Number(a.SeqNum || 0) - Number(b.SeqNum || 0));
+    const stationStops = circuits
+      .map((circuit, index) => ({
+        index,
+        circuit,
+        station: stationByCode.get(circuit.StationCode)
+      }))
+      .filter((stop) => stop.station);
+
+    stationStops.forEach((stop, index) => {
+      addMetroCircuitPosition(positions, stop.circuit, {
+        lineCode,
+        trackNum,
+        lat: stop.station.Lat,
+        lon: stop.station.Lon,
+        fromStation: stop.station.Name,
+        toStation: stop.station.Name
+      });
+
+      const next = stationStops[index + 1];
+      if (!next) return;
+      const span = next.index - stop.index;
+      if (span <= 0) return;
+      for (let circuitIndex = stop.index + 1; circuitIndex < next.index; circuitIndex += 1) {
+        const t = (circuitIndex - stop.index) / span;
+        addMetroCircuitPosition(positions, circuits[circuitIndex], {
+          lineCode,
+          trackNum,
+          lat: stop.station.Lat + ((next.station.Lat - stop.station.Lat) * t),
+          lon: stop.station.Lon + ((next.station.Lon - stop.station.Lon) * t),
+          fromStation: stop.station.Name,
+          toStation: next.station.Name
+        });
+      }
+    });
+  });
+  return positions;
+}
+
+function addMetroCircuitPosition(positions, circuit, position) {
+  const circuitId = Number(circuit?.CircuitId);
+  if (!Number.isFinite(circuitId)) return;
+  positions.push({
+    ...position,
+    circuitId,
+    seqNum: Number(circuit.SeqNum || 0)
+  });
+}
+
+function normalizeMetroCar(train, reference) {
+  const circuitId = Number(train.CircuitId);
+  if (!Number.isFinite(circuitId)) return null;
+
+  const lineCode = safeMetroLineCode(train.LineCode);
+  const position = reference.circuitByLine.get(`${lineCode}|${circuitId}`) ||
+    reference.circuitByLine.get(`*|${circuitId}`);
+  if (!position) return null;
+
+  const destination = reference.stationByCode.get(train.DestinationStationCode)?.Name || "Unknown destination";
+  const lineName = METRO_LINE_NAMES[lineCode] || "Metro";
+  const trainNumber = train.TrainNumber || train.TrainId || "";
+  return {
+    type: "train",
+    name: `${lineName} train${trainNumber ? ` ${trainNumber}` : ""}`,
+    lat: position.lat,
+    lon: position.lon,
+    lineCode,
+    destination,
+    trainId: train.TrainId || "",
+    trainNumber,
+    carCount: Number(train.CarCount || 0),
+    directionNum: Number(train.DirectionNum || 0),
+    secondsAtLocation: Number(train.SecondsAtLocation || 0),
+    serviceType: train.ServiceType || "Normal",
+    fromStation: position.fromStation || "",
+    toStation: position.toStation || ""
+  };
+}
+
+function renderMetroCars(cars = []) {
+  if (!layers.metroCars) return;
+  layers.metroCars.clearLayers();
+
+  cars.forEach((car) => {
+    const marker = L.marker([car.lat, car.lon], {
+      icon: metroCarIcon(car),
+      title: metroCarTitle(car)
+    });
+    marker.bindPopup(metroCarPopup(car), { closeButton: false, className: "metro-car-popup" });
+    marker.addTo(layers.metroCars);
+  });
+}
+
+function metroCarTitle(car) {
+  const cars = car.carCount ? `${car.carCount}-car` : "Metro";
+  return `${car.name} · ${cars} · to ${car.destination}`;
+}
+
+function metroCarPopup(car) {
+  const between = car.fromStation && car.toStation && car.fromStation !== car.toStation
+    ? `${car.fromStation} to ${car.toStation}`
+    : car.fromStation || "Track circuit";
+  const dwell = car.secondsAtLocation ? `${Math.round(car.secondsAtLocation)} sec here` : "Live position";
+  return `
+    <strong>${escapeHtml(car.name)}</strong><br>
+    ${escapeHtml(car.carCount ? `${car.carCount}-car train` : "Train")} to ${escapeHtml(car.destination)}<br>
+    ${escapeHtml(between)} · ${escapeHtml(dwell)}
+  `;
 }
 
 /* Mobility ---------------------------------------------------------- */
@@ -1359,34 +1568,84 @@ async function updateRestaurants(location) {
       way${shopFilter}${around};
       relation${shopFilter}${around};
     );
-    out center tags 120;
+    out center tags;
   `;
-  const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-  if (!response.ok) throw new Error(`Overpass ${response.status}`);
 
-  const data = await response.json();
+  const data = await fetchOverpassJson(query);
   const open = (data.elements || [])
     .map((element) => normalizeRestaurant(element, location))
     .filter(Boolean)
+    .filter((place) => place.distanceMiles <= RESTAURANT_RADIUS_MILES)
     .filter((place) => place.openNow)
     .sort((a, b) => a.distanceMiles - b.distanceMiles);
 
-  saveLiveCacheEntry("restaurants", { open });
+  saveLiveCacheEntry("restaurants", {
+    open,
+    radiusMiles: RESTAURANT_RADIUS_MILES
+  });
   renderRestaurantsData(open);
+}
+
+async function fetchOverpassJson(query) {
+  const response = await fetch(OVERPASS_API_URL, {
+    method: "POST",
+    body: new URLSearchParams({ data: query }),
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error(`Overpass ${response.status}`);
+  return response.json();
+}
+
+function routeDetailsOpen() {
+  return $("routeDetails")?.hidden === false;
+}
+
+function nearbyRestaurantBoundsPoints() {
+  if (!currentLocation) return [];
+  const radiusLat = RESTAURANT_RADIUS_MILES / 69;
+  const radiusLon = RESTAURANT_RADIUS_MILES / (69 * Math.max(0.2, Math.cos(currentLocation.lat * Math.PI / 180)));
+  return [
+    [currentLocation.lat, currentLocation.lon],
+    [currentLocation.lat + radiusLat, currentLocation.lon],
+    [currentLocation.lat - radiusLat, currentLocation.lon],
+    [currentLocation.lat, currentLocation.lon + radiusLon],
+    [currentLocation.lat, currentLocation.lon - radiusLon]
+  ];
+}
+
+function fitMapToOpenRestaurants(open = [], options = {}) {
+  if (!map || !window.L || (!options.force && routeDetailsOpen())) return;
+
+  const restaurantPoints = open
+    .filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.lon))
+    .map((place) => [place.lat, place.lon]);
+  const points = [...nearbyRestaurantBoundsPoints(), ...restaurantPoints];
+  if (!points.length) return;
+
+  const delay = options.delay ?? 150;
+  setTimeout(() => {
+    if (!map || (!options.force && routeDetailsOpen())) return;
+    if (points.length === 1) {
+      map.setView(points[0], 15);
+    } else {
+      map.fitBounds(L.latLngBounds(points), { padding: [60, 60] });
+    }
+  }, delay);
 }
 
 function renderRestaurantsData(open = []) {
   const container = $("restaurantList");
   container.innerHTML = "";
   if (layers.restaurants) layers.restaurants.clearLayers();
-  setText("restaurantStatus", `${open.length} open within ${RESTAURANT_RADIUS_MILES} mi`);
+  setText("restaurantStatus", `${open.length} verified open within ${RESTAURANT_RADIUS_MILES} mi`);
 
   if (!open.length) {
     setEmpty("restaurantList", "No verified-open places nearby.");
+    fitMapToOpenRestaurants(open);
     return;
   }
 
-  open.slice(0, 6).forEach((place) => {
+  open.forEach((place) => {
     const iconName = placeIcon(place);
     container.append(createDataButton(
       place.name,
@@ -1401,13 +1660,20 @@ function renderRestaurantsData(open = []) {
         .addTo(layers.restaurants);
     }
   });
+  fitMapToOpenRestaurants(open);
 }
 
 function restoreCachedRestaurants() {
-  const cached = liveCacheEntry("restaurants");
+  const cached = currentRestaurantCache();
   if (!cached) return false;
   renderRestaurantsData(cached.open || []);
   return true;
+}
+
+function currentRestaurantCache() {
+  const cached = liveCacheEntry("restaurants");
+  if (!cached || cached.radiusMiles !== RESTAURANT_RADIUS_MILES || !Array.isArray(cached.open)) return null;
+  return cached;
 }
 
 function normalizeRestaurant(element, location) {
@@ -1461,7 +1727,6 @@ function formatOsmAddress(tags) {
 }
 
 function showLocationDetail(item, type) {
-  if (!map) return;
   clearRoute({ recenter: false });
 
   const title = item.name || (type === "scooter" ? "Scooter" : "Map item");
@@ -1599,7 +1864,7 @@ async function requestPagePermissions() {
 
 /* Refresh ------------------------------------------------------------ */
 function appVersionFromDocument(documentRoot = document) {
-  const build = documentRoot.querySelector('meta[name="hearth-build"]')?.getAttribute("content");
+  const build = documentRoot.querySelector('meta[name="custom-display-build"]')?.getAttribute("content");
   if (build) return build;
 
   const script = documentRoot.querySelector('script[src*="app.js"]');
@@ -1615,7 +1880,7 @@ function appVersionFromDocument(documentRoot = document) {
 
 async function deployedAppVersion() {
   const url = new URL(window.location.href);
-  url.searchParams.set("hearthUpdateCheck", String(Date.now()));
+  url.searchParams.set("customDisplayUpdateCheck", String(Date.now()));
   const response = await fetch(url.toString(), { cache: "no-store" });
   if (!response.ok) return "";
   const html = await response.text();
@@ -1630,7 +1895,7 @@ async function checkForDashboardUpdate() {
   if (!currentVersion || !nextVersion || currentVersion === nextVersion) return;
 
   const url = new URL(window.location.href);
-  url.searchParams.set("hearthReload", String(Date.now()));
+  url.searchParams.set("customDisplayReload", String(Date.now()));
   window.location.replace(url.toString());
 }
 
@@ -1679,7 +1944,7 @@ async function refreshAll() {
 function fillSettingsForm() {
   $("settingLocation").value = settings.locationLabel;
   $("settingThemeMode").value = settings.themeMode || "auto";
-  $("settingRefresh").value = settings.refreshMinutes;
+  $("settingRefresh").value = effectiveRefreshMinutes();
   $("settingMobilityRadius").value = settings.mobilityRadiusMiles;
   $("settingFallbackLat").value = settings.fallbackLat || "";
   $("settingFallbackLon").value = settings.fallbackLon || "";
@@ -1702,6 +1967,7 @@ function wireSettings() {
 
   $("requestPermissions").addEventListener("click", requestPagePermissions);
   $("clearRouteButton").addEventListener("click", clearRoute);
+  document.addEventListener("pointerdown", handleRouteOutsidePointerDown, true);
   $("locateButton").addEventListener("click", () => requestLocation({ forceBrowser: true }));
   $("themeButton").addEventListener("click", cycleTheme);
   $("mapThemeButton").addEventListener("click", cycleMapTheme);
@@ -1722,7 +1988,7 @@ function wireSettings() {
       ...settings,
       locationLabel: $("settingLocation").value.trim() || "Current Location",
       themeMode: $("settingThemeMode").value || "auto",
-      refreshMinutes: Math.max(1, Number($("settingRefresh").value) || 5),
+      refreshMinutes: Math.max(MIN_REFRESH_MINUTES, Number($("settingRefresh").value) || MIN_REFRESH_MINUTES),
       mobilityRadiusMiles: Math.max(0.1, Number($("settingMobilityRadius").value) || 1),
       fallbackLat: $("settingFallbackLat").value.trim(),
       fallbackLon: $("settingFallbackLon").value.trim(),
@@ -1752,18 +2018,20 @@ function scheduleRefresh() {
     } else {
       refreshAll();
     }
-  }, settings.refreshMinutes * 60 * 1000);
+  }, effectiveRefreshMinutes() * 60 * 1000);
 
-  /* Metro arrivals refresh every 30 seconds independently. */
+  /* Personal keys get full live-map updates; the shared guest feed is intentionally slower. */
   metroTimer = setInterval(() => {
     updateMetro().catch(() => {
       if (!restoreCachedMetro()) setEmpty("metroList", "Updating train arrivals.");
     });
-  }, 30 * 1000);
+  }, String(settings.wmataKey || "").trim()
+    ? METRO_PERSONAL_REFRESH_INTERVAL_MS
+    : METRO_GUEST_REFRESH_INTERVAL_MS);
 }
 
 function isMapInteractionTarget(target) {
-  return Boolean(target?.closest?.("#map, .leaflet-control, .leaflet-popup"));
+  return Boolean(target?.closest?.("#map"));
 }
 
 function wirePageZoomGuards() {

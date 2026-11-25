@@ -100,17 +100,32 @@ body[data-theme="light"]::before {
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  background: #16242a;
+  position: relative;
+  background: #16242a url("./map-fallback.png?v=62") center / cover no-repeat;
 }
 
 body[data-theme="light"] .map-panel {
-  background: #16242a;
+  background: #16242a url("./map-fallback.png?v=62") center / cover no-repeat;
 }
 
-/* Hide leaflet attribution & controls */
-.leaflet-control-attribution,
-.leaflet-control-container { display: none !important; }
-.leaflet-container { background: transparent; outline: none; }
+.map-panel::after {
+  content: "Neighborhood";
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(6, 16, 12, 0.72);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-panel[data-map-theme="light"] {
+  filter: brightness(1.12) saturate(0.86);
+}
 
 /* Dashboard layout (designed for portrait 1080x1920) ----------------- */
 .dashboard {
@@ -298,6 +313,10 @@ body[data-theme="light"] .map-panel {
 }
 
 .pill[hidden] { display: none; }
+
+#trashPill {
+  gap: 16px;
+}
 
 .pill-dot {
   width: 8px;
@@ -700,6 +719,17 @@ body[data-theme="light"] .hour-card {
   gap: 6px;
 }
 
+#restaurantList {
+  max-height: clamp(260px, 30vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+#restaurantList > * {
+  flex-shrink: 0;
+}
+
 .empty-state {
   padding: 12px 14px;
   border-radius: var(--radius-sm);
@@ -981,6 +1011,18 @@ body[data-theme="light"] .daily-item {
 .marker-bike { background: var(--blue); }
 .marker-scooter { background: #b8d04a; }
 .marker-grocery { background: #4ca64c; }
+.marker-train {
+  width: 30px;
+  height: 30px;
+  background: #0a3d8f;
+}
+.marker-metro-RD { background: #BF0D3E; }
+.marker-metro-OR { background: #F26B30; }
+.marker-metro-YL { background: #FFD200; color: #2a2a2a; }
+.marker-metro-GR { background: #00B140; }
+.marker-metro-BL { background: #0078AE; }
+.marker-metro-SV { background: #919D9D; }
+.marker-metro-NA { background: #4a5a55; }
 
 /* Route details ------------------------------------------------------ */
 .route-details {

@@ -1,12 +1,12 @@
-# Hearth Home Dashboard
+# Custom Home Dashboard
 
-A static GitHub Pages dashboard for a wall-mounted Hearth Display running Fully Kiosk Browser.
+A static GitHub Pages dashboard for a wall-mounted Android display running Fully Kiosk Browser.
 
 The page is intentionally safe for a public repo:
 
 - No API keys are required for the weather card.
-- No Hearth ADB details are stored here.
-- The optional WMATA key is entered in the browser UI and stays in that device's local storage.
+- No device ADB details are stored here.
+- The optional personal WMATA key is entered in the browser UI and stays in that device's local storage.
 - No device location, local network URLs, pairing codes, or private tokens are committed.
 
 ## What It Shows
@@ -15,12 +15,13 @@ The page is intentionally safe for a public repo:
 - Animated weather/time-of-day scene and automatic photo scene selection based on dominant weather plus sunrise/sunset-aware time buckets.
 - Clickable scene photo carousel that reverts to the automatic weather/time image after five minutes.
 - Overnight specialty photo cycle from midnight through 5 AM.
-- Current-location map that follows the page theme with dark/light CARTO tiles.
+- Bundled neighborhood-map artwork that follows the page's map-theme setting without external tile requests.
+- Bundled decorative neighborhood map with no external tile or map-API dependency.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
-- Clarendon Station train arrivals via WMATA when a local API key is configured.
+- Clarendon Station arrivals through WMATA's shared guest feed, with faster refreshes when a personal key is configured.
 - Nearby Capital Bikeshare stations via CityBikes.
 - Nearby Lime scooters via Arlington's public GBFS feed.
-- Restaurants within 0.7 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass, with details for hours, phone, address, and website when OSM has them.
+- Restaurants within 1.5 miles that are currently open according to OpenStreetMap `opening_hours` data from Overpass, with details for hours, phone, address, and website when OSM has them.
 - Auto light/dark mode that switches at sunrise and sunset, plus manual light/dark settings.
 - Page permission prompts for location, camera, microphone, notifications, persistent storage, fullscreen, and screen wake lock.
 - A kiosk-friendly portrait layout for a 1080x1920 display.
@@ -29,9 +30,9 @@ The page is intentionally safe for a public repo:
 
 This dashboard does not use fallback sample values. If a live source is temporarily offline, rate-limited, lacks CORS support, or requires configuration, the card keeps its last good data when it has one and otherwise shows a calm updating state.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the Hearth settings dialog so the device can still use live data feeds without committing a location to GitHub. WMATA requires a developer key for rail predictions; enter it on the Hearth settings dialog, not in this repository. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. Basic Metro arrivals use WMATA's rate-limited public guest key; enter a personal WMATA key to enable 30-second refreshes. The neighborhood map is a bundled decorative image, so it never requests external map tiles or displays a map-provider API error. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
 
-## Configure On The Hearth
+## Configure On The Custom Display
 
 Open the dashboard, tap the gear button, and set:
 
@@ -43,21 +44,34 @@ Open the dashboard, tap the gear button, and set:
 - Optional WMATA API key
 - Optional photo URL override; leave it empty to use automatic weather/time scenes
 
-Those settings are stored in the Hearth browser's local storage, not in this public repository.
+Those settings are stored in the display browser's local storage, not in this public repository.
 
 Use the Permissions button to request browser-level kiosk permissions for this page. Android or Fully Kiosk may still require app-level permission settings outside this static page.
 
 For kiosk setup over ADB, the same device-only settings can be saved by opening a one-time URL with query parameters:
 
 ```text
-https://bennyhartnett.github.io/hearth-home-dashboard/?saveLocalSettings=1&locationLabel=Home&fallbackLat=LATITUDE&fallbackLon=LONGITUDE
+https://YOUR_USER.github.io/YOUR_REPO/?saveLocalSettings=1&locationLabel=Home&fallbackLat=LATITUDE&fallbackLon=LONGITUDE
 ```
 
-The page saves the allowed settings locally, then strips those parameters from the address bar. Use real coordinates only on the private Hearth device, not in commits.
+The page saves the allowed settings locally, then strips those parameters from the address bar. Use real coordinates only on the private display device, not in commits.
+
+## Rate-Limit Budget
+
+The dashboard enforces a minimum 5-minute general refresh and keeps provider-specific requests inside published public limits:
+
+- Open-Meteo weather and air quality: 2 calls every 5 minutes, about 576/day, below the free non-commercial limit of 10,000/day, 5,000/hour, and 600/minute.
+- OSRM demo routing: 8 route calls every 5 minutes, paced one at a time with a 1.1-second delay, under the 1 request/second demo-server policy.
+- WMATA: the shared guest feed is limited to station predictions every 5 minutes; a personal key enables 30-second arrival and train-position refreshes, while station and route reference data is cached locally for 7 days.
+- CityBikes: 1 Capital Bikeshare request every 5 minutes, about 12/hour, below the 300/hour public API limit.
+- Lime GBFS through the CORS proxy: 1 request every 5 minutes, matching the GBFS expectation that near-realtime vehicle feeds be no more than 5 minutes stale.
+- Overpass: 1 open-nearby query every 5 minutes, about 288/day, well below the broad public-instance guideline of 10,000 requests/day and 1 GB/day.
+- The bundled map image makes no recurring network requests; the opening-hours parser remains the only map-adjacent CDN asset.
+- GitHub Pages update check: 1 lightweight HTML check per minute, far below the 100 GB/month soft bandwidth limit for a single private kiosk display.
 
 ## Deploy Notes
 
-After the page has loaded this release once, it checks the deployed dashboard every minute and automatically reloads when the `hearth-build` marker in `index.html` changes. Bump the `hearth-build` value plus the `styles.css?v=...` and `app.js?v=...` query strings together for each dashboard deploy so the Hearth display picks up the new build without a manual refresh.
+After the page has loaded this release once, it checks the deployed dashboard every minute and automatically reloads when the `custom-display-build` marker in `index.html` changes. Bump the `custom-display-build` value plus the `styles.css?v=...` and `app.js?v=...` query strings together for each dashboard deploy so the display picks up the new build without a manual refresh.
 
 Run the smoke checks before deploying:
 
