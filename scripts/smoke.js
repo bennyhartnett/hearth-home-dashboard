@@ -44,6 +44,7 @@ assert(!app.includes("tile.openstreetmap.org"), "The map must not request OpenSt
 assert(!index.includes("leaflet"), "The static map must not load Leaflet assets.");
 assert(fs.existsSync(path.join(root, "map-fallback.png")), "Missing bundled map fallback image.");
 assert(fs.existsSync(path.join(root, "map-cars.svg")), "Missing animated map car overlay.");
+assert(index.includes('id="mapBaseImage"') && index.includes('map-fallback.png?v=' + indexBuild), "Map must render its base as a versioned image element.");
 assert(index.includes('id="mapTrafficLayer"'), "Map must include the live traffic overlay host.");
 assert(app.includes('./map-cars.svg?v=${BUILD_VERSION}'), "Animated map car overlay must use the current build version.");
 assert((mapCars.match(/<animateMotion\b/g) || []).length >= 18, "Map must animate prevalent traffic along road paths.");
@@ -68,7 +69,7 @@ assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refres
 assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
 assert(app.includes("preventMapCarOverlaps"), "Map must suppress cars when their bounds would overlap.");
 assert(index.includes('role="button"') && index.includes('aria-pressed="false"'), "Map must expose its inversion control.");
-assert(styles.includes('[data-map-inverted="true"]::before'), "Map must invert only its black-and-white base layer.");
+assert(styles.includes('[data-map-inverted="true"] .map-base-image'), "Map must invert only its black-and-white base image.");
 
 [
   "Weather unavailable",

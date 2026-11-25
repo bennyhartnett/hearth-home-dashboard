@@ -106,12 +106,16 @@ body[data-theme="light"]::before {
   cursor: pointer;
 }
 
-.map-panel::before {
-  content: "";
+.map-base-image {
   position: absolute;
   z-index: 0;
   inset: 0;
-  background: #f5f5f2 url("./map-fallback.png?v=66") center / cover no-repeat;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
   transition: filter 220ms ease;
 }
 
@@ -140,15 +144,15 @@ body[data-theme="light"]::before {
   display: none !important;
 }
 
-.map-panel[data-map-theme="light"]::before {
+.map-panel[data-map-theme="light"] .map-base-image {
   filter: brightness(1.12) saturate(0.86);
 }
 
-.map-panel[data-map-inverted="true"]::before {
+.map-panel[data-map-inverted="true"] .map-base-image {
   filter: invert(1);
 }
 
-.map-panel[data-map-theme="light"][data-map-inverted="true"]::before {
+.map-panel[data-map-theme="light"][data-map-inverted="true"] .map-base-image {
   filter: invert(1) brightness(1.12) saturate(0.86);
 }
 
