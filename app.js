@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "74";
+const BUILD_VERSION = "75";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -75,7 +75,9 @@ const MAP_TRAFFIC_TILE_ZOOM = 14;
 const MAP_TRAFFIC_CACHE_KEY = "custom-display-map-traffic-v1";
 const MAP_INVERSION_KEY = "custom-display-map-inverted-v1";
 const MAP_CAR_RESERVATION_DISTANCE = 120;
-const MAP_CAR_COLLISION_DISTANCE = 86;
+const MAP_CAR_COLLISION_DISTANCE = 50;
+const MAP_CAR_SAME_ROUTE_DISTANCE = 90;
+const MAP_CAR_EMERGENCY_DISTANCE = 60;
 const MAP_TRAFFIC_MAX_CARS = 28;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
@@ -1175,7 +1177,7 @@ function buildMapIntersectionControls(carStates) {
         b.samples.forEach((sampleB) => {
           const rawAngleDifference = Math.abs(sampleA.angle - sampleB.angle) % Math.PI;
           const crossingAngle = Math.min(rawAngleDifference, Math.PI - rawAngleDifference);
-          if (Math.hypot(sampleA.x - sampleB.x, sampleA.y - sampleB.y) <= 18 && crossingAngle >= Math.PI / 4) {
+          if (Math.hypot(sampleA.x - sampleB.x, sampleA.y - sampleB.y) <= 18 && crossingAngle >= Math.PI / 12) {
             matches.push({
               aDistance: sampleA.distance,
               bDistance: sampleB.distance,
@@ -1243,7 +1245,7 @@ function startMapCarAnimation() {
     .sort((left, right) =>
       (left.aPriority + left.bPriority) - (right.aPriority + right.bPriority)
       || Math.hypot(left.x - 1200, left.y - 400) - Math.hypot(right.x - 1200, right.y - 400))
-    .slice(0, 10)
+    .slice(0, 2)
     .map((control, id) => ({ ...control, id }));
   const collisionConflictsByPair = new Map();
   intersectionConflicts.forEach((control) => {
@@ -1309,7 +1311,7 @@ function startMapCarAnimation() {
       return { state, distance, point: routePoint(state, distance) };
     });
     const blocked = new Set();
-    const controllerPhase = Math.floor(time / 6000);
+    const controllerPhase = Math.floor(time / 3000);
     $("map")?.setAttribute("data-signal-phase", String(controllerPhase % 6));
     const statesByRoute = new Map();
     moving.forEach((state) => {
@@ -1328,7 +1330,7 @@ function startMapCarAnimation() {
       const stopDistance = stopRoute === control.aRoute ? control.aDistance : control.bDistance;
       (statesByRoute.get(stopRoute) || []).forEach((state) => {
         const distanceAhead = (stopDistance - state.distance + state.length) % state.length;
-        if (distanceAhead > 0 && distanceAhead < 72) blocked.add(state);
+        if (distanceAhead > 0 && distanceAhead < 55) blocked.add(state);
       });
     });
 
@@ -1339,8 +1341,23 @@ function startMapCarAnimation() {
         if (a.state.route === b.state.route) {
           const aGap = (b.state.distance - a.state.distance + a.state.length) % a.state.length;
           const bGap = (a.state.distance - b.state.distance + b.state.length) % b.state.length;
-          if (aGap > 0 && aGap < MAP_CAR_COLLISION_DISTANCE) blocked.add(a.state);
-          else if (bGap > 0 && bGap < MAP_CAR_COLLISION_DISTANCE) blocked.add(b.state);
+          if (aGap > 0 && aGap < MAP_CAR_SAME_ROUTE_DISTANCE) {
+            blocked.add(a.state);
+            continue;
+          }
+          if (bGap > 0 && bGap < MAP_CAR_SAME_ROUTE_DISTANCE) {
+            blocked.add(b.state);
+            continue;
+          }
+          const aBlocked = blocked.has(a.state);
+          const bBlocked = blocked.has(b.state);
+          const aPoint = aBlocked ? routePoint(a.state, a.state.distance) : a.point;
+          const bPoint = bBlocked ? routePoint(b.state, b.state.distance) : b.point;
+          if (Math.hypot(aPoint.x - bPoint.x, aPoint.y - bPoint.y) >= MAP_CAR_RESERVATION_DISTANCE) continue;
+          const winner = a.state.rank <= b.state.rank ? a.state : b.state;
+          const loser = winner === a.state ? b.state : a.state;
+          if (aBlocked && bBlocked) blocked.delete(winner);
+          else blocked.add(loser);
           continue;
         }
         const routePair = [a.state.route, b.state.route].sort((left, right) => left - right).join(":");
@@ -1354,20 +1371,30 @@ function startMapCarAnimation() {
           const bNear = Math.min(bDelta, b.state.length - bDelta) < 130;
           return aNear && bNear;
         });
-        if (!nearSharedConflict) continue;
         const aBlocked = blocked.has(a.state);
         const bBlocked = blocked.has(b.state);
         const aPoint = aBlocked ? routePoint(a.state, a.state.distance) : a.point;
         const bPoint = bBlocked ? routePoint(b.state, b.state.distance) : b.point;
-        if (Math.hypot(aPoint.x - bPoint.x, aPoint.y - bPoint.y) >= MAP_CAR_COLLISION_DISTANCE) continue;
+        const separation = Math.hypot(aPoint.x - bPoint.x, aPoint.y - bPoint.y);
+        const aOrder = a.state.roadPriority * 100 + a.state.rank;
+        const bOrder = b.state.roadPriority * 100 + b.state.rank;
+        const winner = aOrder <= bOrder ? a.state : b.state;
+        const loser = winner === a.state ? b.state : a.state;
+        if (nearSharedConflict) {
+          blocked.add(loser);
+          blocked.delete(winner);
+          continue;
+        }
+        if (separation >= MAP_CAR_EMERGENCY_DISTANCE) continue;
         if (aBlocked !== bBlocked) {
           blocked.add(aBlocked ? b.state : a.state);
           continue;
         }
-        if (aBlocked && bBlocked) continue;
-        const aOrder = a.state.roadPriority * 100 + a.state.rank;
-        const bOrder = b.state.roadPriority * 100 + b.state.rank;
-        blocked.add(aOrder <= bOrder ? b.state : a.state);
+        if (aBlocked && bBlocked) {
+          blocked.delete(winner);
+          continue;
+        }
+        blocked.add(loser);
       }
     }
 
