@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "70";
+const BUILD_VERSION = "71";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -75,6 +75,7 @@ const MAP_TRAFFIC_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 const MAP_TRAFFIC_TILE_ZOOM = 14;
 const MAP_TRAFFIC_CACHE_KEY = "custom-display-map-traffic-v1";
 const MAP_INVERSION_KEY = "custom-display-map-inverted-v1";
+const MAP_CAR_RESERVATION_DISTANCE = 160;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -1090,7 +1091,7 @@ function startMapCarAnimation() {
   mapTrafficAnimationStates.filter((state) => state.active).forEach((state) => {
     let point = routePoint(state, state.distance);
     for (let attempt = 0; attempt < 32; attempt += 1) {
-      if (occupiedStarts.every((other) => Math.hypot(point.x - other.x, point.y - other.y) >= 96)) break;
+      if (occupiedStarts.every((other) => Math.hypot(point.x - other.x, point.y - other.y) >= MAP_CAR_RESERVATION_DISTANCE)) break;
       state.distance = (state.distance + state.length * 0.137) % (state.length * 2);
       point = routePoint(state, state.distance);
     }
@@ -1114,7 +1115,7 @@ function startMapCarAnimation() {
       for (let second = first + 1; second < proposals.length; second += 1) {
         const a = proposals[first];
         const b = proposals[second];
-        if (Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y) < 96) {
+        if (Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y) < MAP_CAR_RESERVATION_DISTANCE) {
           blocked.add(a.state.rank > b.state.rank ? a.state : b.state);
         }
       }
