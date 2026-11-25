@@ -17,7 +17,7 @@ The page is intentionally safe for a public repo:
 - A clickable Swiss-modern black-and-white map of 923 N Daniel, rendered from real OpenStreetMap geometry, with connected edge-to-edge routes that honor one-way streets and roundabouts. Traffic density follows a separate weekday/weekend demand model, while per-road speed and blue/yellow/red congestion states follow VDOT 511 and require two consecutive readings before changing. Single-color car silhouettes occupy directional lane offsets, enter or leave only beyond the frame, and use alternating intersection right-of-way phases. Clicking the map inverts its black-and-white base without recoloring the cars or home icon.
 - Toll-free route estimates via OSRM, with clickable turn-by-turn route details.
 - Nearby Capital Bikeshare stations via CityBikes.
-- Nearby Lime scooters via Arlington's public GBFS feed.
+- Nearby Bird scooters via Arlington's public GBFS feed.
 - Metro and Open Nearby are hidden while those integrations are out of service.
 - Auto light/dark mode that switches at sunrise and sunset, plus manual light/dark settings.
 - Page permission prompts for location, camera, microphone, notifications, persistent storage, fullscreen, and screen wake lock.
@@ -27,7 +27,7 @@ The page is intentionally safe for a public repo:
 
 This dashboard does not use fallback sample values. If a live source is temporarily offline, rate-limited, lacks CORS support, or requires configuration, the card keeps its last good data when it has one and otherwise shows a calm updating state.
 
-GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. The neighborhood map is a bundled image based on OpenStreetMap geometry, so it never requests external map tiles or displays a map-provider API error. Its car layer samples one VDOT 511/INRIX traffic tile every two minutes, caches the last result, and uses that result to vary both car count and animation speed. OpenStreetMap attribution remains available in Settings instead of covering the map. The Arlington scooter feed is loaded through a public CORS proxy because the vendor feed does not allow direct browser reads from a static page.
+GitHub Pages is served over HTTPS. Browser geolocation must be allowed for true current-location loading. Fully Kiosk Browser requires its PLUS geolocation setting for HTML geolocation; without that, enter fallback coordinates in the custom display settings dialog so the device can still use live data feeds without committing a location to GitHub. The neighborhood map is a bundled image based on OpenStreetMap geometry, so it never requests external map tiles or displays a map-provider API error. Its car layer samples one VDOT 511/INRIX traffic tile every two minutes, caches the last result, and uses that result to vary both car count and animation speed. OpenStreetMap attribution remains available in Settings instead of covering the map. The Arlington scooter feed is read directly from Bird's public HTTPS GBFS endpoint, without a third-party CORS proxy.
 
 ## Configure On The Custom Display
 
@@ -59,7 +59,7 @@ The dashboard enforces a minimum 5-minute general refresh and keeps provider-spe
 - Open-Meteo weather and air quality: 2 calls every 5 minutes, about 576/day, below the free non-commercial limit of 10,000/day, 5,000/hour, and 600/minute.
 - OSRM demo routing: 8 route calls every 5 minutes, paced one at a time with a 1.1-second delay, under the 1 request/second demo-server policy.
 - CityBikes: 1 Capital Bikeshare request every 5 minutes, about 12/hour, below the 300/hour public API limit.
-- Lime GBFS through the CORS proxy: 1 request every 5 minutes, matching the GBFS expectation that near-realtime vehicle feeds be no more than 5 minutes stale.
+- Bird GBFS direct from the operator: 1 request every 5 minutes, matching the GBFS expectation that near-realtime vehicle feeds be no more than 5 minutes stale.
 - The bundled map image makes no recurring network requests.
 - GitHub Pages update check: 1 lightweight HTML check per minute, far below the 100 GB/month soft bandwidth limit for a single private kiosk display.
 

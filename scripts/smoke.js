@@ -41,6 +41,8 @@ assert(!app.match(/\bupdateRestaurants\(currentLocation\)\.catch/), "Hidden Open
 assert(!app.includes("traffic.arcgis.com"), "The map must not depend on the ArcGIS traffic API.");
 assert(!app.includes("trafficKey"), "The map must not request or store a traffic API key.");
 assert(!app.includes("tile.openstreetmap.org"), "The map must not request OpenStreetMap tiles.");
+assert(!app.includes("corsproxy.io") && !app.includes("CORS_PROXY_URL"), "Live dashboard feeds must not depend on a third-party CORS proxy.");
+assert(app.includes("https://mds.bird.co/gbfs/arlingtonco/free_bike_status.json"), "Scooters must use Arlington's direct Bird GBFS feed.");
 assert(!index.includes("leaflet"), "The static map must not load Leaflet assets.");
 assert(fs.existsSync(path.join(root, "map-fallback.png")), "Missing bundled map fallback image.");
 assert(fs.existsSync(path.join(root, "map-cars.svg")), "Missing animated map car overlay.");

@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "73";
+const BUILD_VERSION = "74";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -57,8 +57,7 @@ const OSRM_REQUEST_SPACING_MS = 1100;
 const WMATA_GUEST_API_KEY = "e13626d03d8e4c03ac07f95541b3091b";
 const METRO_REFERENCE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const OVERPASS_API_URL = "https://overpass-api.de/api/interpreter";
-const CORS_PROXY_URL = "https://corsproxy.io/?";
-const LIME_ARLINGTON_SCOOTERS_URL = "https://data.lime.bike/api/partners/v2/gbfs/arlington/free_bike_status";
+const BIRD_ARLINGTON_SCOOTERS_URL = "https://mds.bird.co/gbfs/arlingtonco/free_bike_status.json";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
 const ROUTE_DETAILS_AUTO_CLOSE_MS = 60 * 1000;
 const HERO_PHOTO_CYCLE_MS = 5 * 60 * 1000;
@@ -2213,20 +2212,20 @@ async function fetchBikes(location) {
 }
 
 async function fetchScooters(location) {
-  const response = await fetch(`${CORS_PROXY_URL}${encodeURIComponent(LIME_ARLINGTON_SCOOTERS_URL)}`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Lime ${response.status}`);
+  const response = await fetch(BIRD_ARLINGTON_SCOOTERS_URL, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Bird ${response.status}`);
   const data = await response.json();
   const radius = settings.mobilityRadiusMiles;
   return (data.data?.bikes || [])
     .filter((vehicle) => !Number(vehicle.is_disabled) && !Number(vehicle.is_reserved))
-    .filter((vehicle) => String(vehicle.vehicle_type || "").toLowerCase().includes("scooter"))
     .map((vehicle) => ({
       type: "scooter",
-      name: "Lime scooter",
+      name: "Bird scooter",
+      provider: "Bird scooter",
       lat: vehicle.lat,
       lon: vehicle.lon,
-      battery: vehicle.current_fuel_percent == null ? null : Math.round(Number(vehicle.current_fuel_percent || 0) * 100),
-      rangeMiles: vehicle.current_range_meters == null ? null : miles(Number(vehicle.current_range_meters || 0)),
+      battery: null,
+      rangeMiles: null,
       distanceMiles: miles(distanceMeters(location, { lat: vehicle.lat, lon: vehicle.lon }))
     }))
     .filter((vehicle) => vehicle.distanceMiles <= radius)
@@ -2425,7 +2424,7 @@ function showLocationDetail(item, type) {
 
 function detailRows(item, type, iconName) {
   const rows = [
-    ["Type", type === "restaurant" ? `${item.kind}${item.cuisine ? `, ${item.cuisine}` : ""}` : type === "bike" ? "Capital Bikeshare" : "Lime scooter"],
+    ["Type", type === "restaurant" ? `${item.kind}${item.cuisine ? `, ${item.cuisine}` : ""}` : type === "bike" ? "Capital Bikeshare" : item.provider || "Scooter"],
     ["Distance", item.distanceMiles != null ? formatMiles(item.distanceMiles) : ""],
     ["Location", `${Number(item.lat).toFixed(5)}, ${Number(item.lon).toFixed(5)}`]
   ];
