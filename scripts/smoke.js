@@ -52,6 +52,7 @@ assert(!mapCars.includes("<animateMotion"), "Map cars must use collision-aware J
 assert(mapCars.includes('data-phase="') && mapCars.includes('data-route="'), "Map cars must preserve continuous route position data.");
 assert(mapCars.includes("#0A84FF"), "Map cars must use electric blue.");
 assert(mapCars.includes("#FF2D2D") && mapCars.includes("car-shadow-red"), "Map must support red cars on congested roads.");
+assert(mapCars.includes("#FFD60A") && mapCars.includes("car-shadow-yellow"), "Map must support yellow cars on partially congested roads.");
 const carLayer = mapCars.split("</defs>")[1]?.split('<g class="map-home-marker"')[0] || "";
 assert(carLayer && !/#ffffff|#DFF1FF|#031528/i.test(carLayer), "Map cars must be electric blue with no white or dark details.");
 const carDurations = [...mapCars.matchAll(/data-traffic-rank="(\d+)"[^>]*data-base-duration="([\d.]+)"/g)];
@@ -70,8 +71,10 @@ assert(app.includes("VDOT_TRAFFIC_TOKEN_URL"), "Map must load current VDOT traff
 assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refresh on a schedule.");
 assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
 assert(app.includes("startMapCarAnimation"), "Map must use continuous collision-aware car motion.");
-assert(app.includes("currentRedTrafficRoutes"), "Map must derive red cars from live road-level traffic.");
+assert(app.includes("currentTrafficRouteStates"), "Map must derive yellow and red cars from live road-level traffic.");
 assert(!app.includes("visibility = \"hidden\""), "Map cars must never disappear to avoid a collision.");
+assert(!app.includes("wantsActive"), "Map traffic counts must not make cars appear or disappear mid-road.");
+assert(!read("scripts/render_map_options.py").includes("extend_route_offscreen"), "Car paths must never use artificial off-road extensions.");
 assert(index.includes('role="button"') && index.includes('aria-pressed="false"'), "Map must expose its inversion control.");
 assert(styles.includes('[data-map-inverted="true"] .map-base-image'), "Map must invert only its black-and-white base image.");
 

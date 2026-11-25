@@ -156,31 +156,6 @@ def line_length(points):
     return sum(math.dist(a, b) for a, b in zip(points, points[1:]))
 
 
-def extend_route_offscreen(points, margin=80):
-    """Extend route tangents past the canvas so loop resets stay invisible."""
-    if len(points) < 2:
-        return points
-
-    def extend(point, neighbor):
-        dx = point[0] - neighbor[0]
-        dy = point[1] - neighbor[1]
-        if abs(dx) + abs(dy) < 0.001:
-            return point
-        candidates = []
-        if dx < 0:
-            candidates.append((-margin - point[0]) / dx)
-        elif dx > 0:
-            candidates.append((WIDTH + margin - point[0]) / dx)
-        if dy < 0:
-            candidates.append((-margin - point[1]) / dy)
-        elif dy > 0:
-            candidates.append((HEIGHT + margin - point[1]) / dy)
-        distance = min(value for value in candidates if value >= 0)
-        return (round(point[0] + dx * distance), round(point[1] + dy * distance))
-
-    return [extend(points[0], points[1]), *points, extend(points[-1], points[-2])]
-
-
 def point_on_polyline(points, fraction):
     lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
     total = sum(lengths)
@@ -430,11 +405,11 @@ def make_car_overlay(data):
         x, y, _ = point_on_polyline(points, 0.5)
         if not (0 <= x <= WIDTH and 0 <= y <= HEIGHT):
             continue
-        if any(math.dist((x, y), midpoint) < 170 for midpoint in midpoints):
+        if any(math.dist((x, y), midpoint) < 72 for midpoint in midpoints):
             continue
         selected.append((highway, points, length))
         midpoints.append((x, y))
-        if len(selected) == 7:
+        if len(selected) == 21:
             break
 
     durations = (14, 18, 21, 16, 24, 19, 27)
@@ -442,17 +417,13 @@ def make_car_overlay(data):
     cars = []
     for index, (_, points, _) in enumerate(selected, 1):
         route_points = list(reversed(points)) if index % 2 == 0 else points
-        route_points = extend_route_offscreen(route_points)
         path_data = "M " + " L ".join(f"{x},{y}" for x, y in route_points)
         defs.append(f'<path id="car-route-{index}" d="{path_data}"/>')
-    for wave in range(3):
-        for route_index, _ in enumerate(selected, 1):
-            rank = wave * len(selected) + route_index
-            # Every car on the same road keeps the same speed and an exact
-            # one-third-lap offset, so faster cars can never catch slower ones.
-            base_duration = durations[route_index - 1]
-            phase = (wave / 3 + route_index * 0.047) % 1
-            cars.append(f'''\
+    for route_index, _ in enumerate(selected, 1):
+        rank = route_index
+        base_duration = durations[(route_index - 1) % len(durations)]
+        phase = (route_index * 0.173) % 1
+        cars.append(f'''\
   <g class="map-car map-car-{rank}" data-traffic-rank="{rank}" data-route="{route_index}" data-phase="{phase:.4f}" data-base-duration="{base_duration}" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
@@ -477,6 +448,9 @@ def make_car_overlay(data):
     </filter>
     <filter id="car-shadow-red" x="-50%" y="-100%" width="200%" height="300%">
       <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FF2D2D" flood-opacity="0.78"/>
+    </filter>
+    <filter id="car-shadow-yellow" x="-50%" y="-100%" width="200%" height="300%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FFD60A" flood-opacity="0.78"/>
     </filter>
     <filter id="home-shadow" x="-80%" y="-80%" width="260%" height="260%">
       <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#001b36" flood-opacity="0.55"/>

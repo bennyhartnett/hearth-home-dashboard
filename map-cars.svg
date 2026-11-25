@@ -6,12 +6,15 @@
     <filter id="car-shadow-red" x="-50%" y="-100%" width="200%" height="300%">
       <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FF2D2D" flood-opacity="0.78"/>
     </filter>
+    <filter id="car-shadow-yellow" x="-50%" y="-100%" width="200%" height="300%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FFD60A" flood-opacity="0.78"/>
+    </filter>
     <filter id="home-shadow" x="-80%" y="-80%" width="260%" height="260%">
       <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#001b36" flood-opacity="0.55"/>
     </filter>
-    <path id="car-route-1" d="M 1387,880 L 1942,167 L 1949,158 L 1959,147 L 1968,137 L 1979,126 L 1992,115 L 2003,107 L 2015,98 L 2027,90 L 2040,81 L 2054,73 L 2067,66 L 2081,60 L 2096,54 L 2111,48 L 2125,43 L 2141,37 L 2245,1 L 2260,-4 L 2275,-10 L 2290,-17 L 2304,-23 L 2437,-80"/><path id="car-route-2" d="M 1931,880 L 1866,532 L 1842,403 L 1839,390 L 1836,375 L 1835,361 L 1834,348 L 1834,335 L 1834,323 L 1835,309 L 1836,297 L 1839,280 L 1843,263 L 1846,249 L 1851,236 L 1857,221 L 1863,209 L 1869,195 L 1876,184 L 1884,171 L 2038,-80"/><path id="car-route-3" d="M 709,-80 L 683,-56 L 670,-44 L 635,-16 L 567,41 L 557,48 L 549,55 L 501,94 L 488,104 L 478,111 L -80,502"/><path id="car-route-4" d="M 673,-80 L 974,372 L 982,384 L 1022,450 L 1043,484 L 1056,509 L 1062,519 L 1067,528 L 1095,578 L 1264,880"/><path id="car-route-5" d="M 2480,285 L 1583,299 L 1521,300 L 1510,300 L 1496,301 L 1409,303 L 1397,303 L 1385,303 L 1289,305 L 1281,305 L 1273,305 L 1263,306 L 1169,307 L 1055,310 L -80,340"/><path id="car-route-6" d="M -80,570 L -63,561 L -29,544 L 24,519 L 42,509 L 67,495 L 72,492 L 87,484 L 100,477 L 115,469 L 123,465 L 149,442 L 161,431 L 167,426 L 174,419 L 193,399 L 198,393 L 208,384 L 221,371 L 237,355 L 241,351 L 259,331 L 265,326 L 752,-80"/><path id="car-route-7" d="M 2480,278 L 579,319 L 533,320 L 493,321 L 480,323 L 469,323 L 410,325 L 353,325 L 332,324 L 318,322 L 304,320 L 286,316 L 276,313 L -80,206"/>
+    <path id="car-route-1" d="M 1942,167 L 1949,158 L 1959,147 L 1968,137 L 1979,126 L 1992,115 L 2003,107 L 2015,98 L 2027,90 L 2040,81 L 2054,73 L 2067,66 L 2081,60 L 2096,54 L 2111,48 L 2125,43 L 2141,37 L 2245,1 L 2260,-4 L 2275,-10 L 2290,-17 L 2304,-23"/><path id="car-route-2" d="M 1866,532 L 1842,403 L 1839,390 L 1836,375 L 1835,361 L 1834,348 L 1834,335 L 1834,323 L 1835,309 L 1836,297 L 1839,280 L 1843,263 L 1846,249 L 1851,236 L 1857,221 L 1863,209 L 1869,195 L 1876,184 L 1884,171"/><path id="car-route-3" d="M 2297,-43 L 2282,-36 L 2263,-28 L 2241,-20 L 2216,-12 L 2194,-6 L 2115,15 L 2096,20 L 2082,25 L 2074,27 L 2067,30 L 2058,33 L 2050,36 L 2043,40 L 2035,43"/><path id="car-route-4" d="M 478,111 L 488,104 L 501,94 L 549,55 L 557,48 L 567,41 L 635,-16 L 670,-44 L 683,-56"/><path id="car-route-5" d="M 1095,578 L 1067,528 L 1062,519 L 1056,509 L 1043,484 L 1022,450 L 982,384 L 974,372"/><path id="car-route-6" d="M 1045,519 L 1040,509 L 1029,491 L 1005,450 L 967,388 L 932,343 L 924,336 L 913,323"/><path id="car-route-7" d="M 1583,299 L 1521,300 L 1510,300 L 1496,301 L 1409,303 L 1397,303 L 1385,303 L 1289,305 L 1281,305 L 1273,305 L 1263,306 L 1169,307 L 1055,310"/><path id="car-route-8" d="M -63,561 L -29,544 L 24,519 L 42,509 L 67,495 L 72,492 L 87,484 L 100,477 L 115,469 L 123,465 L 149,442 L 161,431 L 167,426 L 174,419 L 193,399 L 198,393 L 208,384 L 221,371 L 237,355 L 241,351 L 259,331 L 265,326"/><path id="car-route-9" d="M 579,319 L 533,320 L 493,321 L 480,323 L 469,323 L 410,325 L 353,325 L 332,324 L 318,322 L 304,320 L 286,316 L 276,313"/><path id="car-route-10" d="M 847,325 L 832,325 L 811,325 L 740,326 L 728,326 L 713,326 L 673,327 L 636,328 L 621,328 L 609,328 L 581,330"/><path id="car-route-11" d="M 2538,365 L 2426,400 L 2286,441 L 2277,444 L 2260,449 L 2249,453 L 2217,463 L 2211,464 L 2193,470 L 2185,472 L 2094,499 L 2089,501 L 2075,505 L 2064,507"/><path id="car-route-12" d="M 1511,309 L 1513,315 L 1514,325 L 1515,331 L 1518,363 L 1519,367 L 1526,438 L 1527,451 L 1532,498 L 1533,507 L 1534,516 L 1539,561 L 1552,688 L 1556,736 L 1561,783 L 1562,794"/><path id="car-route-13" d="M 1526,-67 L 1573,-41 L 1580,-37 L 1653,1 L 1692,21 L 1745,42 L 1773,54 L 1840,80 L 1849,84 L 1858,88 L 1866,92 L 1878,100 L 1895,110 L 1899,113 L 1908,119"/><path id="car-route-14" d="M 2106,885 L 2100,852 L 2097,839 L 2090,802 L 2087,783 L 2085,773 L 2078,736 L 2071,701 L 2065,668 L 2057,625 L 2048,573 L 2046,559 L 2043,545"/><path id="car-route-15" d="M 1884,734 L 1869,741 L 1860,746 L 1851,751 L 1841,756 L 1834,760 L 1826,763 L 1819,766 L 1811,769 L 1802,772 L 1793,775 L 1758,784 L 1746,788 L 1739,790 L 1732,791 L 1724,793 L 1716,795 L 1709,795 L 1702,796 L 1695,796 L 1688,796 L 1680,796 L 1640,794 L 1626,793 L 1584,791 L 1572,792 L 1562,794"/><path id="car-route-16" d="M 1444,-97 L 1455,-9 L 1456,-2 L 1457,7 L 1466,100 L 1466,108 L 1467,114 L 1472,158 L 1476,179 L 1481,203"/><path id="car-route-17" d="M 1562,794 L 1552,794 L 1424,787 L 1415,786 L 1360,783 L 1352,783 L 1309,781"/><path id="car-route-18" d="M 478,530 L 484,530 L 490,530 L 727,524 L 735,524 L 743,524 L 845,521 L 853,521 L 863,521 L 953,520 L 963,520 L 973,519 L 989,519 L 1024,518 L 1028,518 L 1045,519 L 1062,519 L 1075,518 L 1078,519 L 1167,516 L 1175,516 L 1184,516 L 1272,513 L 1280,513 L 1288,513 L 1400,510 L 1410,510 L 1419,510 L 1522,507 L 1533,507 L 1545,507 L 1593,506 L 1686,504 L 1709,504"/><path id="car-route-19" d="M 1427,928 L 1424,798 L 1424,795 L 1424,787 L 1425,778 L 1425,777 L 1421,729 L 1413,567 L 1410,518 L 1410,510 L 1409,502 L 1407,452 L 1403,366 L 1400,320 L 1398,312 L 1397,303 L 1395,296 L 1382,258 L 1359,199 L 1352,176 L 1349,161 L 1345,123 L 1344,117"/><path id="car-route-20" d="M 467,170 L 467,179 L 467,199 L 467,216 L 469,272 L 469,303 L 469,312 L 469,314 L 469,323 L 470,333 L 470,342 L 470,345 L 471,351 L 473,376 L 473,387 L 473,392 L 474,416 L 474,430 L 476,466 L 477,507 L 478,530 L 481,629 L 481,656 L 484,739 L 484,752 L 491,770 L 497,788 L 499,793 L 503,804 L 516,836 L 523,846 L 525,849 L 531,871"/><path id="car-route-21" d="M 1286,753 L 1280,520 L 1280,513 L 1280,504 L 1274,322 L 1274,314 L 1273,305 L 1272,299 L 1272,247 L 1272,242 L 1271,226 L 1271,215 L 1271,207 L 1270,147 L 1269,128 L 1269,122 L 1267,84"/>
   </defs>
-  <g class="map-car map-car-1" data-traffic-rank="1" data-route="1" data-phase="0.0470" data-base-duration="14" filter="url(#car-shadow-blue)">
+  <g class="map-car map-car-1" data-traffic-rank="1" data-route="1" data-phase="0.1730" data-base-duration="14" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -19,7 +22,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-2" data-traffic-rank="2" data-route="2" data-phase="0.0940" data-base-duration="18" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-2" data-traffic-rank="2" data-route="2" data-phase="0.3460" data-base-duration="18" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -27,7 +30,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-3" data-traffic-rank="3" data-route="3" data-phase="0.1410" data-base-duration="21" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-3" data-traffic-rank="3" data-route="3" data-phase="0.5190" data-base-duration="21" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -35,7 +38,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-4" data-traffic-rank="4" data-route="4" data-phase="0.1880" data-base-duration="16" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-4" data-traffic-rank="4" data-route="4" data-phase="0.6920" data-base-duration="16" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -43,7 +46,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-5" data-traffic-rank="5" data-route="5" data-phase="0.2350" data-base-duration="24" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-5" data-traffic-rank="5" data-route="5" data-phase="0.8650" data-base-duration="24" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -51,7 +54,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-6" data-traffic-rank="6" data-route="6" data-phase="0.2820" data-base-duration="19" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-6" data-traffic-rank="6" data-route="6" data-phase="0.0380" data-base-duration="19" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -59,7 +62,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-7" data-traffic-rank="7" data-route="7" data-phase="0.3290" data-base-duration="27" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-7" data-traffic-rank="7" data-route="7" data-phase="0.2110" data-base-duration="27" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -67,7 +70,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-8" data-traffic-rank="8" data-route="1" data-phase="0.3803" data-base-duration="14" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-8" data-traffic-rank="8" data-route="8" data-phase="0.3840" data-base-duration="14" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -75,7 +78,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-9" data-traffic-rank="9" data-route="2" data-phase="0.4273" data-base-duration="18" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-9" data-traffic-rank="9" data-route="9" data-phase="0.5570" data-base-duration="18" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -83,7 +86,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-10" data-traffic-rank="10" data-route="3" data-phase="0.4743" data-base-duration="21" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-10" data-traffic-rank="10" data-route="10" data-phase="0.7300" data-base-duration="21" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -91,7 +94,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-11" data-traffic-rank="11" data-route="4" data-phase="0.5213" data-base-duration="16" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-11" data-traffic-rank="11" data-route="11" data-phase="0.9030" data-base-duration="16" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -99,7 +102,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-12" data-traffic-rank="12" data-route="5" data-phase="0.5683" data-base-duration="24" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-12" data-traffic-rank="12" data-route="12" data-phase="0.0760" data-base-duration="24" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -107,7 +110,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-13" data-traffic-rank="13" data-route="6" data-phase="0.6153" data-base-duration="19" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-13" data-traffic-rank="13" data-route="13" data-phase="0.2490" data-base-duration="19" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -115,7 +118,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-14" data-traffic-rank="14" data-route="7" data-phase="0.6623" data-base-duration="27" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-14" data-traffic-rank="14" data-route="14" data-phase="0.4220" data-base-duration="27" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -123,7 +126,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-15" data-traffic-rank="15" data-route="1" data-phase="0.7137" data-base-duration="14" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-15" data-traffic-rank="15" data-route="15" data-phase="0.5950" data-base-duration="14" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -131,7 +134,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-16" data-traffic-rank="16" data-route="2" data-phase="0.7607" data-base-duration="18" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-16" data-traffic-rank="16" data-route="16" data-phase="0.7680" data-base-duration="18" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -139,7 +142,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-17" data-traffic-rank="17" data-route="3" data-phase="0.8077" data-base-duration="21" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-17" data-traffic-rank="17" data-route="17" data-phase="0.9410" data-base-duration="21" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -147,7 +150,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-18" data-traffic-rank="18" data-route="4" data-phase="0.8547" data-base-duration="16" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-18" data-traffic-rank="18" data-route="18" data-phase="0.1140" data-base-duration="16" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -155,7 +158,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-19" data-traffic-rank="19" data-route="5" data-phase="0.9017" data-base-duration="24" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-19" data-traffic-rank="19" data-route="19" data-phase="0.2870" data-base-duration="24" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -163,7 +166,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-20" data-traffic-rank="20" data-route="6" data-phase="0.9487" data-base-duration="19" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-20" data-traffic-rank="20" data-route="20" data-phase="0.4600" data-base-duration="19" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
@@ -171,7 +174,7 @@
       <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
       <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
-  </g>  <g class="map-car map-car-21" data-traffic-rank="21" data-route="7" data-phase="0.9957" data-base-duration="27" filter="url(#car-shadow-blue)">
+  </g>  <g class="map-car map-car-21" data-traffic-rank="21" data-route="21" data-phase="0.6330" data-base-duration="27" filter="url(#car-shadow-blue)">
     <g transform="translate(-18 -8)">
       <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>

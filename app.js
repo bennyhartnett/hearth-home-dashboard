@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "68";
+const BUILD_VERSION = "69";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -972,14 +972,14 @@ function trafficCountsNearPixel(pixels, centerX, centerY, radius = 8) {
   return counts;
 }
 
-async function currentRedTrafficRoutes() {
+async function currentTrafficRouteStates() {
   const svg = $("mapTrafficLayer")?.querySelector("svg");
-  if (!svg) return [];
+  if (!svg) return { yellowRoutes: [], redRoutes: [] };
   const routeSamples = [];
   const tiles = new Map();
-  for (let route = 1; route <= 7; route += 1) {
-    const path = svg.querySelector(`#car-route-${route}`);
-    if (!path) continue;
+  const paths = [...svg.querySelectorAll('path[id^="car-route-"]')];
+  paths.forEach((path) => {
+    const route = Number(path.id.replace("car-route-", ""));
     const length = path.getTotalLength();
     const samples = [];
     for (let index = 1; index < 30; index += 1) {
@@ -991,10 +991,11 @@ async function currentRedTrafficRoutes() {
       samples.push({ key, pixelX: tile.pixelX, pixelY: tile.pixelY });
     }
     routeSamples.push({ route, samples });
-  }
+  });
 
   const tilePixels = new Map(await Promise.all([...tiles.entries()].map(async ([key, tile]) => [key, await trafficTilePixels(tile)])));
   const redRoutes = [];
+  const yellowRoutes = [];
   routeSamples.forEach(({ route, samples }) => {
     const total = { red: 0, amber: 0, green: 0 };
     samples.forEach((sample) => {
@@ -1005,18 +1006,22 @@ async function currentRedTrafficRoutes() {
     });
     const colored = total.red + total.amber + total.green;
     if (total.red >= 6 && colored > 0 && total.red / colored >= 0.12) redRoutes.push(route);
+    else if (total.amber >= 6 && colored > 0 && total.amber / colored >= 0.12) yellowRoutes.push(route);
   });
-  return redRoutes;
+  return { yellowRoutes, redRoutes };
 }
 
-function applyMapRouteColors(redRoutes = []) {
+function applyMapRouteColors(redRoutes = [], yellowRoutes = []) {
   const badRoads = new Set(redRoutes.map(Number));
+  const slowRoads = new Set(yellowRoutes.map(Number));
   $("mapTrafficLayer")?.querySelectorAll(".map-car").forEach((car) => {
     const isBad = badRoads.has(Number(car.dataset.route));
-    const color = isBad ? "#FF2D2D" : "#0A84FF";
+    const isSlow = !isBad && slowRoads.has(Number(car.dataset.route));
+    const state = isBad ? "red" : isSlow ? "yellow" : "blue";
+    const color = isBad ? "#FF2D2D" : isSlow ? "#FFD60A" : "#0A84FF";
     car.querySelectorAll("[fill]").forEach((shape) => shape.setAttribute("fill", color));
-    car.setAttribute("filter", `url(#car-shadow-${isBad ? "red" : "blue"})`);
-    car.dataset.trafficColor = isBad ? "red" : "blue";
+    car.setAttribute("filter", `url(#car-shadow-${state})`);
+    car.dataset.trafficColor = state;
   });
 }
 
@@ -1027,21 +1032,22 @@ function applyMapTrafficState(state, source) {
   const count = Math.max(1, Math.round(Number(state.count) || 13));
   const speedFactor = Math.max(0.5, Number(state.speedFactor) || 1);
   const cars = [...host.querySelectorAll(".map-car")];
-  mapTrafficTargetCount = count;
+  if (!mapTrafficAnimationStates.length) mapTrafficTargetCount = count;
   mapTrafficSpeedFactor = speedFactor;
-  cars.forEach((car, index) => {
-    const rank = Number(car.dataset.trafficRank) || index + 1;
-    car.dataset.wantsActive = rank <= count ? "true" : "false";
-    if (!mapTrafficAnimationStates.length) car.style.display = rank <= count ? "" : "none";
-  });
-  mapTrafficAnimationStates.forEach((carState) => {
-    carState.wantsActive = carState.rank <= count;
-  });
-  applyMapRouteColors(state.redRoutes || []);
+  if (!mapTrafficAnimationStates.length) {
+    cars.forEach((car, index) => {
+      const rank = Number(car.dataset.trafficRank) || index + 1;
+      car.style.display = rank <= count ? "" : "none";
+    });
+  }
+  applyMapRouteColors(state.redRoutes || [], state.yellowRoutes || []);
   const level = String(state.level || "updating");
   panel.dataset.trafficSource = source;
   panel.dataset.trafficLevel = level;
-  panel.dataset.trafficCars = String(Math.min(count, cars.length || count));
+  const activeCount = mapTrafficAnimationStates.length
+    ? mapTrafficAnimationStates.filter((carState) => carState.active).length
+    : Math.min(count, cars.length || count);
+  panel.dataset.trafficCars = String(activeCount);
   panel.setAttribute("aria-label", `923 North Daniel Street map with ${level} live traffic; activate to invert black and white`);
 }
 
@@ -1065,41 +1071,31 @@ function startMapCarAnimation() {
       length,
       rank,
       baseDuration: Number(car.dataset.baseDuration) || 18,
-      distance: (Number(car.dataset.phase) || 0) * length,
-      active,
-      wantsActive: active
+      distance: (Number(car.dataset.phase) || 0) * length * 2,
+      active
     };
   }).filter((state) => state.path);
 
   const routePoint = (state, distance) => {
-    const point = state.path.getPointAtLength(distance);
-    const nextDistance = Math.min(state.length, distance + 2);
-    const neighbor = nextDistance === distance
-      ? state.path.getPointAtLength(Math.max(0, distance - 2))
-      : state.path.getPointAtLength(nextDistance);
-    const angle = nextDistance === distance
-      ? Math.atan2(point.y - neighbor.y, point.x - neighbor.x) * 180 / Math.PI
-      : Math.atan2(neighbor.y - point.y, neighbor.x - point.x) * 180 / Math.PI;
+    const cycleDistance = distance % (state.length * 2);
+    const forward = cycleDistance <= state.length;
+    const pathDistance = forward ? cycleDistance : state.length * 2 - cycleDistance;
+    const point = state.path.getPointAtLength(pathDistance);
+    const neighborDistance = Math.max(0, Math.min(state.length, pathDistance + (forward ? 2 : -2)));
+    const neighbor = state.path.getPointAtLength(neighborDistance);
+    const angle = Math.atan2(neighbor.y - point.y, neighbor.x - point.x) * 180 / Math.PI;
     return { x: point.x, y: point.y, angle };
   };
-  const offscreen = (point) => point.x < -40 || point.x > 2440 || point.y < -40 || point.y > 840;
   let previousTime = performance.now();
 
   const animate = (time) => {
     const elapsed = Math.min(0.05, Math.max(0, (time - previousTime) / 1000));
     previousTime = time;
-    mapTrafficAnimationStates.forEach((state) => {
-      if (!state.active && state.wantsActive) {
-        state.distance = 0;
-        state.active = true;
-        state.car.style.display = "";
-      }
-    });
 
     const moving = mapTrafficAnimationStates.filter((state) => state.active);
     const proposals = moving.map((state) => {
       const speed = state.length / (state.baseDuration * mapTrafficSpeedFactor);
-      const distance = (state.distance + speed * elapsed) % state.length;
+      const distance = (state.distance + speed * elapsed) % (state.length * 2);
       return { state, distance, point: routePoint(state, distance) };
     });
     const blocked = new Set();
@@ -1117,10 +1113,6 @@ function startMapCarAnimation() {
       if (!blocked.has(state)) state.distance = distance;
       const point = routePoint(state, state.distance);
       state.car.setAttribute("transform", `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)}) rotate(${point.angle.toFixed(2)})`);
-      if (!state.wantsActive && offscreen(point)) {
-        state.active = false;
-        state.car.style.display = "none";
-      }
     });
     mapTrafficAnimationFrame = requestAnimationFrame(animate);
   };
@@ -1130,7 +1122,7 @@ function startMapCarAnimation() {
 async function updateMapTraffic() {
   try {
     const state = analyzeTrafficPixels(await trafficTilePixels());
-    state.redRoutes = await currentRedTrafficRoutes();
+    Object.assign(state, await currentTrafficRouteStates());
     applyMapTrafficState(state, "live");
     saveCachedMapTraffic(state);
     lastTrafficUpdateAt = Date.now();
