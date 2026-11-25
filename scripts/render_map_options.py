@@ -366,83 +366,160 @@ def make_contact_sheets(files):
 
 
 def make_car_overlay(data):
-    candidates = []
-    for element in data.get("elements", []):
-        tags = element.get("tags", {})
-        highway = tags.get("highway")
-        points = points_for(element)
-        if not highway or len(points) < 2 or highway in {"footway", "path", "cycleway", "steps"}:
-            continue
-        runs = []
-        run = []
-        for point_index, point in enumerate(points):
-            x, y = point
-            inside = -60 <= x <= WIDTH + 60 and -60 <= y <= HEIGHT + 60
-            if inside:
-                if not run and point_index > 0:
-                    run.append(points[point_index - 1])
-                run.append(point)
-            elif run:
-                run.append(point)
-                if len(run) >= 2:
-                    runs.append(run)
-                run = []
-        if len(run) >= 2:
-            runs.append(run)
-        for visible_points in runs:
-            length = line_length(visible_points)
-            if length >= 230:
-                candidates.append((highway, visible_points, length))
-
+    excluded = {"footway", "path", "cycleway", "steps", "pedestrian", "bridleway", "corridor"}
     priority = {
         "motorway": 0, "trunk": 1, "primary": 2, "secondary": 3,
         "tertiary": 4, "residential": 5, "unclassified": 6, "service": 7,
     }
-    candidates.sort(key=lambda road: (priority.get(road[0], 8), -road[2]))
+    adjacency = {}
+
+    def add_edge(start, end, highway, road_priority, two_way):
+        adjacency.setdefault(start, []).append({
+            "start": start,
+            "end": end,
+            "highway": highway,
+            "priority": road_priority,
+            "two_way": two_way,
+        })
+
+    for element in data.get("elements", []):
+        tags = element.get("tags", {})
+        highway = tags.get("highway")
+        points = points_for(element)
+        if not highway or highway in excluded or len(points) < 2:
+            continue
+        oneway_value = str(tags.get("oneway", "")).lower()
+        is_roundabout = tags.get("junction") == "roundabout"
+        reverse_only = oneway_value == "-1"
+        is_oneway = reverse_only or is_roundabout or oneway_value in {"yes", "1", "true"}
+        if reverse_only:
+            points = list(reversed(points))
+        road_priority = priority.get(highway, 8)
+        for start, end in zip(points, points[1:]):
+            if not (
+                -120 <= start[0] <= WIDTH + 120 and -120 <= start[1] <= HEIGHT + 120
+                or -120 <= end[0] <= WIDTH + 120 and -120 <= end[1] <= HEIGHT + 120
+            ):
+                continue
+            add_edge(start, end, highway, road_priority, not is_oneway)
+            if not is_oneway:
+                add_edge(end, start, highway, road_priority, True)
+
+    def outside(point):
+        return point[0] <= -25 or point[0] >= WIDTH + 25 or point[1] <= -25 or point[1] >= HEIGHT + 25
+
+    def turn_angle(previous, current, following):
+        incoming = (current[0] - previous[0], current[1] - previous[1])
+        outgoing = (following[0] - current[0], following[1] - current[1])
+        incoming_length = math.hypot(*incoming) or 1
+        outgoing_length = math.hypot(*outgoing) or 1
+        cosine = max(-1, min(1, (incoming[0] * outgoing[0] + incoming[1] * outgoing[1]) / (incoming_length * outgoing_length)))
+        return math.acos(cosine)
+
+    def walk_route(first_edge):
+        points = [first_edge["start"], first_edge["end"]]
+        edges = [first_edge]
+        visited = {(first_edge["start"], first_edge["end"])}
+        visited_nodes = set(points)
+        while len(points) < 220 and line_length(points) < 5200:
+            current = points[-1]
+            if len(points) > 3 and outside(current) and line_length(points) >= 520:
+                break
+            options = [
+                edge for edge in adjacency.get(current, [])
+                if (edge["start"], edge["end"]) not in visited
+                and edge["end"] != points[-2]
+                and edge["end"] not in visited_nodes
+            ]
+            if not options:
+                break
+            previous = points[-2]
+            current_priority = edges[-1]["priority"]
+            current_highway = edges[-1]["highway"]
+            options.sort(key=lambda edge: (
+                0 if edge["highway"] == current_highway else 1,
+                abs(edge["priority"] - current_priority),
+                turn_angle(previous, current, edge["end"]),
+                1 if edge["end"] in points else 0,
+            ))
+            chosen = options[0]
+            visited.add((chosen["start"], chosen["end"]))
+            visited_nodes.add(chosen["end"])
+            edges.append(chosen)
+            points.append(chosen["end"])
+        return {
+            "points": points,
+            "length": line_length(points),
+            "priority": min(edge["priority"] for edge in edges),
+            "two_way": all(edge["two_way"] for edge in edges),
+            "edge_keys": {(edge["start"], edge["end"]) for edge in edges},
+        }
+
+    route_candidates = []
+    for start, edges in adjacency.items():
+        if not outside(start):
+            continue
+        for edge in edges:
+            route = walk_route(edge)
+            if route["length"] >= 520 and outside(route["points"][-1]):
+                route_candidates.append(route)
+    route_candidates.sort(key=lambda route: (route["priority"], -route["length"]))
+
     selected = []
-    midpoints = []
     selected_samples = []
-    for highway, points, length in candidates:
-        x, y, _ = point_on_polyline(points, 0.5)
-        if not (0 <= x <= WIDTH and 0 <= y <= HEIGHT):
+    for route in route_candidates:
+        if any(len(route["edge_keys"] & existing["edge_keys"]) >= 3 for existing in selected):
             continue
-        if any(math.dist((x, y), midpoint) < 72 for midpoint in midpoints):
-            continue
-        samples = [point_on_polyline(points, index / 24)[:2] for index in range(25)]
-        overlaps_existing_road = any(
-            sum(
-                1 for sample in samples
-                if min(math.dist(sample, other) for other in existing_samples) < 52
-            ) >= 3
-            for existing_samples in selected_samples
+        samples = [point_on_polyline(route["points"], index / 30)[:2] for index in range(31)]
+        duplicate = any(
+            sum(1 for sample in samples if min(math.dist(sample, other) for other in existing) < 28) >= 22
+            for existing in selected_samples
         )
-        if overlaps_existing_road:
+        if duplicate:
             continue
-        selected.append((highway, points, length))
-        midpoints.append((x, y))
+        selected.append(route)
         selected_samples.append(samples)
-        if len(selected) == 21:
+        if len(selected) == 10:
             break
 
-    durations = (14, 18, 21, 16, 24, 19, 27)
+    # Add legal reverse-direction partners for two-way connected routes.
+    paired_routes = []
+    for route in selected:
+        paired_routes.append({**route, "lane": 9.0, "direction": "forward"})
+        if route["two_way"] and len(paired_routes) < 14:
+            paired_routes.append({
+                **route,
+                "points": list(reversed(route["points"])),
+                "lane": 9.0,
+                "direction": "reverse",
+            })
+    routes = paired_routes[:14]
+    if len(routes) < 6:
+        raise RuntimeError(f"Only {len(routes)} connected traffic routes reached the map boundary")
+
     defs = []
+    for index, route in enumerate(routes, 1):
+        path_data = "M " + " L ".join(f"{x},{y}" for x, y in route["points"])
+        defs.append(f'<path id="car-route-{index}" d="{path_data}" data-direction="{route["direction"]}"/>')
+
+    total_cars = 28
+    assignments = [[] for _ in routes]
+    for rank in range(1, total_cars + 1):
+        assignments[(rank - 1) % len(routes)].append(rank)
     cars = []
-    for index, (_, points, _) in enumerate(selected, 1):
-        route_points = list(reversed(points)) if index % 2 == 0 else points
-        path_data = "M " + " L ".join(f"{x},{y}" for x, y in route_points)
-        defs.append(f'<path id="car-route-{index}" d="{path_data}"/>')
-    for route_index, _ in enumerate(selected, 1):
-        rank = route_index
-        base_duration = durations[(route_index - 1) % len(durations)]
-        phase = (route_index * 0.173) % 1
-        cars.append(f'''\
-  <g class="map-car map-car-{rank}" data-traffic-rank="{rank}" data-route="{route_index}" data-phase="{phase:.4f}" data-base-duration="{base_duration}" filter="url(#car-shadow-blue)">
-    <g transform="translate(-18 -8)">
-      <path d="M 7,1 H 29 C 33,1 35,4 35,8 C 35,12 33,15 29,15 H 7 C 3,15 1,12 1,8 C 1,4 3,1 7,1 Z" fill="#0A84FF"/>
+    for route_index, (route, ranks) in enumerate(zip(routes, assignments), 1):
+        speed = 88 if route["priority"] <= 1 else 68 if route["priority"] <= 3 else 52
+        duration = max(8, route["length"] / speed)
+        for slot, rank in enumerate(ranks):
+            phase = slot / len(ranks) + (route_index * 0.031) % (1 / len(ranks))
+            cars.append(f'''\
+  <g class="map-car map-car-{rank}" data-traffic-rank="{rank}" data-route="{route_index}" data-phase="{phase:.4f}" data-base-duration="{duration:.2f}" data-road-priority="{route["priority"]}" data-lane-offset="{route["lane"]}" filter="url(#car-shadow-blue)">
+    <g transform="translate(-16 -7)">
+      <path d="M 5,1 H 23 L 31,5 V 9 L 23,13 H 5 L 1,10 V 4 Z" fill="#0A84FF"/>
       <rect x="5" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
-      <rect x="24" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
-      <rect x="5" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
-      <rect x="24" y="14" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="20" y="0" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="5" y="12" width="7" height="2" rx="1" fill="#0A84FF"/>
+      <rect x="20" y="12" width="7" height="2" rx="1" fill="#0A84FF"/>
     </g>
   </g>''')
 
@@ -455,18 +532,10 @@ def make_car_overlay(data):
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <filter id="car-shadow-blue" x="-50%" y="-100%" width="200%" height="300%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0A84FF" flood-opacity="0.72"/>
-    </filter>
-    <filter id="car-shadow-red" x="-50%" y="-100%" width="200%" height="300%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FF2D2D" flood-opacity="0.78"/>
-    </filter>
-    <filter id="car-shadow-yellow" x="-50%" y="-100%" width="200%" height="300%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#FFD60A" flood-opacity="0.78"/>
-    </filter>
-    <filter id="home-shadow" x="-80%" y="-80%" width="260%" height="260%">
-      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#001b36" flood-opacity="0.55"/>
-    </filter>
+    <filter id="car-shadow-blue" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#0A84FF" flood-opacity="0.7"/></filter>
+    <filter id="car-shadow-red" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#FF2D2D" flood-opacity="0.76"/></filter>
+    <filter id="car-shadow-yellow" x="-50%" y="-100%" width="200%" height="300%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#FFD60A" flood-opacity="0.76"/></filter>
+    <filter id="home-shadow" x="-80%" y="-80%" width="260%" height="260%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#001b36" flood-opacity="0.55"/></filter>
     {''.join(defs)}
   </defs>
 {''.join(cars)}
@@ -474,6 +543,7 @@ def make_car_overlay(data):
 </svg>
 '''
     (ROOT / "map-cars.svg").write_text(svg, encoding="utf-8")
+    print(f"Built {len(routes)} connected directed routes for {total_cars} cars")
 
 
 def main():

@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "71";
+const BUILD_VERSION = "72";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -75,7 +75,9 @@ const MAP_TRAFFIC_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 const MAP_TRAFFIC_TILE_ZOOM = 14;
 const MAP_TRAFFIC_CACHE_KEY = "custom-display-map-traffic-v1";
 const MAP_INVERSION_KEY = "custom-display-map-inverted-v1";
-const MAP_CAR_RESERVATION_DISTANCE = 160;
+const MAP_CAR_RESERVATION_DISTANCE = 120;
+const MAP_CAR_COLLISION_DISTANCE = 86;
+const MAP_TRAFFIC_MAX_CARS = 28;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
   snow: "./scenes/snow_daniel.png",
@@ -165,6 +167,9 @@ let mapTrafficAnimationFrame = null;
 let mapTrafficAnimationStates = [];
 let mapTrafficTargetCount = 13;
 let mapTrafficSpeedFactor = 1;
+let mapTrafficRouteSpeeds = new Map();
+const mapTrafficRouteHistory = new Map();
+let mapTrafficIntersections = [];
 
 const $ = (id) => document.getElementById(id);
 
@@ -923,6 +928,24 @@ function trafficPixelKind(red, green, blue, alpha) {
   return null;
 }
 
+function trafficDemandScore(date = new Date()) {
+  const hour = date.getHours() + date.getMinutes() / 60;
+  const weekday = date.getDay() >= 1 && date.getDay() <= 5;
+  if (weekday) {
+    if ((hour >= 6.5 && hour < 9.5) || (hour >= 15.5 && hour < 19)) return 0.98;
+    if (hour >= 9.5 && hour < 15.5) return 0.68;
+    if ((hour >= 5 && hour < 6.5) || (hour >= 19 && hour < 22)) return 0.5;
+    return 0.2;
+  }
+  if (hour >= 10 && hour < 20) return 0.58;
+  if ((hour >= 7 && hour < 10) || (hour >= 20 && hour < 23)) return 0.38;
+  return 0.16;
+}
+
+function trafficDemandCount(date = new Date()) {
+  return Math.max(10, Math.min(MAP_TRAFFIC_MAX_CARS, Math.round(10 + trafficDemandScore(date) * 18)));
+}
+
 function analyzeTrafficPixels(pixels) {
   let trafficPixels = 0;
   let congestionWeight = 0;
@@ -943,7 +966,8 @@ function analyzeTrafficPixels(pixels) {
   const congestion = congestionWeight / trafficPixels;
   const level = congestion < 0.18 ? "light" : congestion < 0.42 ? "moderate" : "heavy";
   return {
-    count: Math.max(13, Math.min(21, Math.round(13 + congestion * 10))),
+    count: trafficDemandCount(),
+    density: Number(trafficDemandScore().toFixed(2)),
     speedFactor: Math.max(0.9, Math.min(2.4, 0.82 + congestion * 1.8)),
     level,
     congestion: Number(congestion.toFixed(3)),
@@ -997,6 +1021,7 @@ async function currentTrafficRouteStates() {
   const tilePixels = new Map(await Promise.all([...tiles.entries()].map(async ([key, tile]) => [key, await trafficTilePixels(tile)])));
   const redRoutes = [];
   const yellowRoutes = [];
+  const routeStates = {};
   routeSamples.forEach(({ route, samples }) => {
     const total = { red: 0, amber: 0, green: 0 };
     samples.forEach((sample) => {
@@ -1006,24 +1031,84 @@ async function currentTrafficRouteStates() {
       total.green += counts.green;
     });
     const colored = total.red + total.amber + total.green;
-    if (total.red >= 6 && colored > 0 && total.red / colored >= 0.12) redRoutes.push(route);
-    else if (total.amber >= 6 && colored > 0 && total.amber / colored >= 0.12) yellowRoutes.push(route);
+    let color = "blue";
+    if (total.red >= 6 && colored > 0 && total.red / colored >= 0.12) {
+      color = "red";
+      redRoutes.push(route);
+    } else if (total.amber >= 6 && colored > 0 && total.amber / colored >= 0.12) {
+      color = "yellow";
+      yellowRoutes.push(route);
+    }
+    const congestion = colored
+      ? (total.red + total.amber * 0.55 + total.green * 0.06) / colored
+      : 0.06;
+    routeStates[route] = {
+      color,
+      congestion: Number(congestion.toFixed(3)),
+      speedFactor: color === "red" ? 2.5 : color === "yellow" ? 1.55 : 1
+    };
   });
-  return { yellowRoutes, redRoutes };
+  return { yellowRoutes, redRoutes, routeStates };
+}
+
+function stabilizeTrafficRouteStates(routeStates = {}) {
+  const stabilized = {};
+  Object.entries(routeStates).forEach(([route, next]) => {
+    const previous = mapTrafficRouteHistory.get(route);
+    if (!previous) {
+      mapTrafficRouteHistory.set(route, { stable: next.color, candidate: next.color, samples: 1 });
+      stabilized[route] = next;
+      return;
+    }
+    if (next.color === previous.stable) {
+      previous.candidate = next.color;
+      previous.samples = 0;
+    } else if (next.color === previous.candidate) {
+      previous.samples += 1;
+      if (previous.samples >= 2) {
+        previous.stable = next.color;
+        previous.samples = 0;
+      }
+    } else {
+      previous.candidate = next.color;
+      previous.samples = 1;
+    }
+    const stableColor = previous.stable;
+    stabilized[route] = {
+      ...next,
+      color: stableColor,
+      speedFactor: stableColor === "red" ? 2.5 : stableColor === "yellow" ? 1.55 : 1
+    };
+  });
+  return stabilized;
+}
+
+function applyMapRouteStates(routeStates = {}) {
+  mapTrafficRouteSpeeds = new Map();
+  $("mapTrafficLayer")?.querySelectorAll(".map-car").forEach((car) => {
+    const route = Number(car.dataset.route);
+    const state = routeStates[route] || { color: "blue", speedFactor: 1 };
+    const color = state.color === "red" ? "#FF2D2D" : state.color === "yellow" ? "#FFD60A" : "#0A84FF";
+    car.querySelectorAll("[fill]").forEach((shape) => {
+      shape.style.transition = "fill 600ms ease";
+      shape.setAttribute("fill", color);
+    });
+    car.setAttribute("filter", `url(#car-shadow-${state.color})`);
+    car.dataset.trafficColor = state.color;
+    mapTrafficRouteSpeeds.set(route, Number(state.speedFactor) || 1);
+  });
 }
 
 function applyMapRouteColors(redRoutes = [], yellowRoutes = []) {
-  const badRoads = new Set(redRoutes.map(Number));
-  const slowRoads = new Set(yellowRoutes.map(Number));
+  const states = {};
   $("mapTrafficLayer")?.querySelectorAll(".map-car").forEach((car) => {
-    const isBad = badRoads.has(Number(car.dataset.route));
-    const isSlow = !isBad && slowRoads.has(Number(car.dataset.route));
-    const state = isBad ? "red" : isSlow ? "yellow" : "blue";
-    const color = isBad ? "#FF2D2D" : isSlow ? "#FFD60A" : "#0A84FF";
-    car.querySelectorAll("[fill]").forEach((shape) => shape.setAttribute("fill", color));
-    car.setAttribute("filter", `url(#car-shadow-${state})`);
-    car.dataset.trafficColor = state;
+    const route = Number(car.dataset.route);
+    states[route] = {
+      color: redRoutes.map(Number).includes(route) ? "red" : yellowRoutes.map(Number).includes(route) ? "yellow" : "blue",
+      speedFactor: redRoutes.map(Number).includes(route) ? 2.5 : yellowRoutes.map(Number).includes(route) ? 1.55 : 1
+    };
   });
+  applyMapRouteStates(states);
 }
 
 function applyMapTrafficState(state, source) {
@@ -1033,23 +1118,96 @@ function applyMapTrafficState(state, source) {
   const count = Math.max(1, Math.round(Number(state.count) || 13));
   const speedFactor = Math.max(0.5, Number(state.speedFactor) || 1);
   const cars = [...host.querySelectorAll(".map-car")];
-  if (!mapTrafficAnimationStates.length) mapTrafficTargetCount = count;
+  mapTrafficTargetCount = Math.min(count, cars.length || count);
   mapTrafficSpeedFactor = speedFactor;
-  if (!mapTrafficAnimationStates.length) {
-    cars.forEach((car, index) => {
-      const rank = Number(car.dataset.trafficRank) || index + 1;
-      car.style.display = rank <= count ? "" : "none";
+  cars.forEach((car, index) => {
+    const rank = Number(car.dataset.trafficRank) || index + 1;
+    car.dataset.wantsActive = rank <= mapTrafficTargetCount ? "true" : "false";
+    if (!mapTrafficAnimationStates.length) car.style.display = rank <= mapTrafficTargetCount ? "" : "none";
+  });
+  mapTrafficAnimationStates.forEach((carState) => {
+    carState.wantsActive = carState.rank <= mapTrafficTargetCount;
+  });
+  if (source === "cached" && state.routeStates) {
+    Object.entries(state.routeStates).forEach(([route, value]) => {
+      mapTrafficRouteHistory.set(route, { stable: value.color, candidate: value.color, samples: 0 });
     });
   }
-  applyMapRouteColors(state.redRoutes || [], state.yellowRoutes || []);
+  if (state.routeStates) applyMapRouteStates(state.routeStates);
+  else applyMapRouteColors(state.redRoutes || [], state.yellowRoutes || []);
   const level = String(state.level || "updating");
   panel.dataset.trafficSource = source;
   panel.dataset.trafficLevel = level;
+  panel.dataset.trafficDensity = String(state.density ?? trafficDemandScore().toFixed(2));
   const activeCount = mapTrafficAnimationStates.length
     ? mapTrafficAnimationStates.filter((carState) => carState.active).length
     : Math.min(count, cars.length || count);
   panel.dataset.trafficCars = String(activeCount);
   panel.setAttribute("aria-label", `923 North Daniel Street map with ${level} live traffic; activate to invert black and white`);
+}
+
+function buildMapIntersectionControls(carStates) {
+  const routes = new Map();
+  carStates.forEach((state) => {
+    if (!routes.has(state.route)) routes.set(state.route, state);
+  });
+  const sampledRoutes = [...routes.values()].map((state) => {
+    const step = 22;
+    const samples = [];
+    for (let distance = 0; distance <= state.length; distance += step) {
+      const point = state.path.getPointAtLength(Math.min(distance, state.length));
+      const neighbor = state.path.getPointAtLength(Math.min(distance + 6, state.length));
+      samples.push({
+        distance,
+        x: point.x,
+        y: point.y,
+        angle: Math.atan2(neighbor.y - point.y, neighbor.x - point.x)
+      });
+    }
+    return { state, samples };
+  });
+  const controls = [];
+  for (let first = 0; first < sampledRoutes.length; first += 1) {
+    for (let second = first + 1; second < sampledRoutes.length; second += 1) {
+      const a = sampledRoutes[first];
+      const b = sampledRoutes[second];
+      const matches = [];
+      a.samples.forEach((sampleA) => {
+        b.samples.forEach((sampleB) => {
+          const rawAngleDifference = Math.abs(sampleA.angle - sampleB.angle) % Math.PI;
+          const crossingAngle = Math.min(rawAngleDifference, Math.PI - rawAngleDifference);
+          if (Math.hypot(sampleA.x - sampleB.x, sampleA.y - sampleB.y) <= 18 && crossingAngle >= Math.PI / 4) {
+            matches.push({
+              aDistance: sampleA.distance,
+              bDistance: sampleB.distance,
+              x: (sampleA.x + sampleB.x) / 2,
+              y: (sampleA.y + sampleB.y) / 2
+            });
+          }
+        });
+      });
+      matches.sort((left, right) => left.aDistance - right.aDistance);
+      const clustered = [];
+      matches.forEach((match) => {
+        if (clustered.some((existing) => Math.hypot(match.x - existing.x, match.y - existing.y) < 90)) return;
+        clustered.push(match);
+      });
+      clustered.slice(0, 2).forEach((match) => {
+        controls.push({
+          id: controls.length,
+          aRoute: a.state.route,
+          bRoute: b.state.route,
+          aDistance: Math.min(match.aDistance, a.state.length),
+          bDistance: Math.min(match.bDistance, b.state.length),
+          aPriority: a.state.roadPriority,
+          bPriority: b.state.roadPriority,
+          x: match.x,
+          y: match.y
+        });
+      });
+    }
+  }
+  return controls;
 }
 
 function startMapCarAnimation() {
@@ -1070,29 +1228,51 @@ function startMapCarAnimation() {
       car,
       path,
       length,
+      route,
       rank,
+      roadPriority: Number(car.dataset.roadPriority) || 8,
+      laneOffset: Number(car.dataset.laneOffset) || 0,
       baseDuration: Number(car.dataset.baseDuration) || 18,
-      distance: (Number(car.dataset.phase) || 0) * length * 2,
-      active
+      distance: (Number(car.dataset.phase) || 0) * length,
+      active,
+      wantsActive: active
     };
   }).filter((state) => state.path);
+  const intersectionConflicts = buildMapIntersectionControls(mapTrafficAnimationStates);
+  mapTrafficIntersections = intersectionConflicts
+    .filter((control) => control.x >= 0 && control.x <= 2400 && control.y >= 0 && control.y <= 800)
+    .sort((left, right) =>
+      (left.aPriority + left.bPriority) - (right.aPriority + right.bPriority)
+      || Math.hypot(left.x - 1200, left.y - 400) - Math.hypot(right.x - 1200, right.y - 400))
+    .slice(0, 10)
+    .map((control, id) => ({ ...control, id }));
+  const collisionRoutePairs = new Set(intersectionConflicts.map((control) =>
+    [control.aRoute, control.bRoute].sort((a, b) => a - b).join(":")));
+  $("map")?.setAttribute("data-intersection-controls", String(mapTrafficIntersections.length));
 
   const routePoint = (state, distance) => {
-    const cycleDistance = distance % (state.length * 2);
-    const forward = cycleDistance <= state.length;
-    const pathDistance = forward ? cycleDistance : state.length * 2 - cycleDistance;
+    const pathDistance = distance % state.length;
     const point = state.path.getPointAtLength(pathDistance);
-    const neighborDistance = Math.max(0, Math.min(state.length, pathDistance + (forward ? 2 : -2)));
+    const neighborDistance = Math.min(state.length, pathDistance + 2);
     const neighbor = state.path.getPointAtLength(neighborDistance);
-    const angle = Math.atan2(neighbor.y - point.y, neighbor.x - point.x) * 180 / Math.PI;
-    return { x: point.x, y: point.y, angle };
+    const dx = neighbor.x - point.x;
+    const dy = neighbor.y - point.y;
+    const tangentLength = Math.hypot(dx, dy) || 1;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    return {
+      x: point.x - dy / tangentLength * state.laneOffset,
+      y: point.y + dx / tangentLength * state.laneOffset,
+      rawX: point.x,
+      rawY: point.y,
+      angle
+    };
   };
   const occupiedStarts = [];
   mapTrafficAnimationStates.filter((state) => state.active).forEach((state) => {
     let point = routePoint(state, state.distance);
     for (let attempt = 0; attempt < 32; attempt += 1) {
       if (occupiedStarts.every((other) => Math.hypot(point.x - other.x, point.y - other.y) >= MAP_CAR_RESERVATION_DISTANCE)) break;
-      state.distance = (state.distance + state.length * 0.137) % (state.length * 2);
+      state.distance = (state.distance + state.length * 0.137) % state.length;
       point = routePoint(state, state.distance);
     }
     occupiedStarts.push(point);
@@ -1103,21 +1283,78 @@ function startMapCarAnimation() {
   const animate = (time) => {
     const elapsed = Math.min(0.05, Math.max(0, (time - previousTime) / 1000));
     previousTime = time;
+    mapTrafficAnimationStates.forEach((state) => {
+      if (!state.active && state.wantsActive) {
+        const entranceClear = mapTrafficAnimationStates
+          .filter((other) => other.active && other.route === state.route)
+          .every((other) => {
+            const distanceFromStart = other.distance % other.length;
+            return distanceFromStart >= MAP_CAR_RESERVATION_DISTANCE;
+          });
+        if (!entranceClear) return;
+        state.distance = 0;
+        state.active = true;
+        state.car.style.display = "";
+      }
+    });
 
     const moving = mapTrafficAnimationStates.filter((state) => state.active);
     const proposals = moving.map((state) => {
-      const speed = state.length / (state.baseDuration * mapTrafficSpeedFactor);
-      const distance = (state.distance + speed * elapsed) % (state.length * 2);
+      const routeSpeedFactor = mapTrafficRouteSpeeds.get(state.route) || mapTrafficSpeedFactor;
+      const speed = state.length / (state.baseDuration * routeSpeedFactor);
+      const distance = (state.distance + speed * elapsed) % state.length;
       return { state, distance, point: routePoint(state, distance) };
     });
     const blocked = new Set();
+    const controllerPhase = Math.floor(time / 6000);
+    $("map")?.setAttribute("data-signal-phase", String(controllerPhase % 6));
+    const statesByRoute = new Map();
+    moving.forEach((state) => {
+      if (!statesByRoute.has(state.route)) statesByRoute.set(state.route, []);
+      statesByRoute.get(state.route).push(state);
+    });
+    mapTrafficIntersections.forEach((control) => {
+      const phase = (controllerPhase + control.id) % 3;
+      const prioritiesDiffer = Math.abs(control.aPriority - control.bPriority) >= 2;
+      const majorRoute = control.aPriority <= control.bPriority ? control.aRoute : control.bRoute;
+      const minorRoute = majorRoute === control.aRoute ? control.bRoute : control.aRoute;
+      const greenRoute = prioritiesDiffer
+        ? (phase === 2 ? minorRoute : majorRoute)
+        : (phase % 2 === 0 ? control.aRoute : control.bRoute);
+      const stopRoute = greenRoute === control.aRoute ? control.bRoute : control.aRoute;
+      const stopDistance = stopRoute === control.aRoute ? control.aDistance : control.bDistance;
+      (statesByRoute.get(stopRoute) || []).forEach((state) => {
+        const distanceAhead = (stopDistance - state.distance + state.length) % state.length;
+        if (distanceAhead > 0 && distanceAhead < 72) blocked.add(state);
+      });
+    });
+
     for (let first = 0; first < proposals.length; first += 1) {
       for (let second = first + 1; second < proposals.length; second += 1) {
         const a = proposals[first];
         const b = proposals[second];
-        if (Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y) < MAP_CAR_RESERVATION_DISTANCE) {
-          blocked.add(a.state.rank > b.state.rank ? a.state : b.state);
+        if (a.state.route === b.state.route) {
+          const aGap = (b.state.distance - a.state.distance + a.state.length) % a.state.length;
+          const bGap = (a.state.distance - b.state.distance + b.state.length) % b.state.length;
+          if (aGap > 0 && aGap < MAP_CAR_COLLISION_DISTANCE) blocked.add(a.state);
+          else if (bGap > 0 && bGap < MAP_CAR_COLLISION_DISTANCE) blocked.add(b.state);
+          continue;
         }
+        const routePair = [a.state.route, b.state.route].sort((left, right) => left - right).join(":");
+        if (!collisionRoutePairs.has(routePair)) continue;
+        const aBlocked = blocked.has(a.state);
+        const bBlocked = blocked.has(b.state);
+        const aPoint = aBlocked ? routePoint(a.state, a.state.distance) : a.point;
+        const bPoint = bBlocked ? routePoint(b.state, b.state.distance) : b.point;
+        if (Math.hypot(aPoint.x - bPoint.x, aPoint.y - bPoint.y) >= MAP_CAR_COLLISION_DISTANCE) continue;
+        if (aBlocked !== bBlocked) {
+          blocked.add(aBlocked ? b.state : a.state);
+          continue;
+        }
+        if (aBlocked && bBlocked) continue;
+        const aOrder = a.state.roadPriority * 100 + a.state.rank;
+        const bOrder = b.state.roadPriority * 100 + b.state.rank;
+        blocked.add(aOrder <= bOrder ? b.state : a.state);
       }
     }
 
@@ -1125,6 +1362,11 @@ function startMapCarAnimation() {
       if (!blocked.has(state)) state.distance = distance;
       const point = routePoint(state, state.distance);
       state.car.setAttribute("transform", `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)}) rotate(${point.angle.toFixed(2)})`);
+      const offscreen = point.rawX <= -20 || point.rawX >= 2420 || point.rawY <= -20 || point.rawY >= 820;
+      if (!state.wantsActive && offscreen) {
+        state.active = false;
+        state.car.style.display = "none";
+      }
     });
     mapTrafficAnimationFrame = requestAnimationFrame(animate);
   };
@@ -1134,7 +1376,10 @@ function startMapCarAnimation() {
 async function updateMapTraffic() {
   try {
     const state = analyzeTrafficPixels(await trafficTilePixels());
-    Object.assign(state, await currentTrafficRouteStates());
+    const routeData = await currentTrafficRouteStates();
+    state.routeStates = stabilizeTrafficRouteStates(routeData.routeStates);
+    state.redRoutes = Object.entries(state.routeStates).filter(([, value]) => value.color === "red").map(([route]) => Number(route));
+    state.yellowRoutes = Object.entries(state.routeStates).filter(([, value]) => value.color === "yellow").map(([route]) => Number(route));
     applyMapTrafficState(state, "live");
     saveCachedMapTraffic(state);
     lastTrafficUpdateAt = Date.now();
@@ -1156,7 +1401,10 @@ async function initializeMapTraffic() {
   }
 
   const cached = loadCachedMapTraffic();
-  applyMapTrafficState(cached || { count: 13, speedFactor: 1, level: "updating" }, cached ? "cached" : "fallback");
+  applyMapTrafficState(
+    cached || { count: trafficDemandCount(), density: trafficDemandScore(), speedFactor: 1, level: "updating", routeStates: {} },
+    cached ? "cached" : "fallback"
+  );
   startMapCarAnimation();
   updateMapTraffic();
   clearInterval(trafficRefreshTimer);

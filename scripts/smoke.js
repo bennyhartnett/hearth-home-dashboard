@@ -47,22 +47,31 @@ assert(fs.existsSync(path.join(root, "map-cars.svg")), "Missing animated map car
 assert(index.includes('id="mapBaseImage"') && index.includes('map-fallback.png?v=' + indexBuild), "Map must render its base as a versioned image element.");
 assert(index.includes('id="mapTrafficLayer"'), "Map must include the live traffic overlay host.");
 assert(app.includes('./map-cars.svg?v=${BUILD_VERSION}'), "Animated map car overlay must use the current build version.");
-assert((mapCars.match(/class="map-car map-car-/g) || []).length >= 18, "Map must include prevalent traffic along road paths.");
+assert((mapCars.match(/class="map-car map-car-/g) || []).length >= 24, "Map must include demand-scaled traffic along connected roads.");
 assert(!mapCars.includes("<animateMotion"), "Map cars must use collision-aware JavaScript motion instead of blinking SVG loops.");
 assert(mapCars.includes('data-phase="') && mapCars.includes('data-route="'), "Map cars must preserve continuous route position data.");
+assert(mapCars.includes('data-road-priority="') && mapCars.includes('data-lane-offset="'), "Map cars must carry intersection priority and lane metadata.");
 assert(mapCars.includes("#0A84FF"), "Map cars must use electric blue.");
 assert(mapCars.includes("#FF2D2D") && mapCars.includes("car-shadow-red"), "Map must support red cars on congested roads.");
 assert(mapCars.includes("#FFD60A") && mapCars.includes("car-shadow-yellow"), "Map must support yellow cars on partially congested roads.");
 const carLayer = mapCars.split("</defs>")[1]?.split('<g class="map-home-marker"')[0] || "";
 assert(carLayer && !/#ffffff|#DFF1FF|#031528/i.test(carLayer), "Map cars must be electric blue with no white or dark details.");
-const carDurations = [...mapCars.matchAll(/data-traffic-rank="(\d+)"[^>]*data-base-duration="([\d.]+)"/g)];
+const carDurations = [...mapCars.matchAll(/data-traffic-rank="\d+"[^>]*data-route="(\d+)"[^>]*data-base-duration="([\d.]+)"/g)];
 const durationsByRoute = new Map();
-carDurations.forEach(([, rankText, duration]) => {
-  const route = (Number(rankText) - 1) % 7;
+carDurations.forEach(([, routeText, duration]) => {
+  const route = Number(routeText);
   if (!durationsByRoute.has(route)) durationsByRoute.set(route, new Set());
   durationsByRoute.get(route).add(duration);
 });
 assert([...durationsByRoute.values()].every((durations) => durations.size === 1), "Cars sharing a road must keep the same speed.");
+const connectedRoutes = [...mapCars.matchAll(/<path id="car-route-\d+" d="([^"]+)" data-direction="(forward|reverse)"/g)];
+assert(connectedRoutes.length >= 6, "Map must include multiple connected directed road routes.");
+connectedRoutes.forEach(([, pathData]) => {
+  const points = [...pathData.matchAll(/(-?\d+),(-?\d+)/g)].map((match) => [Number(match[1]), Number(match[2])]);
+  const outside = ([x, y]) => x <= -20 || x >= 2420 || y <= -20 || y >= 820;
+  assert(points.length > 3 && outside(points[0]) && outside(points.at(-1)), "Connected car routes must enter and leave beyond the map edge.");
+  assert(new Set(points.map((point) => point.join(","))).size === points.length, "Connected car routes must not double back through a previously visited road node.");
+});
 assert(mapCars.includes('class="map-home-marker"'), "Map must use a home icon at the address.");
 assert(!mapCars.includes("923 N DANIEL"), "Map overlay must not show address text.");
 assert(!styles.includes(".map-panel::after"), "Map must not show a corner label or credit.");
@@ -72,9 +81,14 @@ assert(app.includes("MAP_TRAFFIC_REFRESH_INTERVAL_MS"), "Map traffic must refres
 assert(app.includes("trafficTileUrl"), "Map must build a live traffic-speed tile request.");
 assert(app.includes("startMapCarAnimation"), "Map must use continuous collision-aware car motion.");
 assert(app.includes("currentTrafficRouteStates"), "Map must derive yellow and red cars from live road-level traffic.");
+assert(app.includes("trafficDemandCount"), "Traffic density must be independent from congestion color.");
+assert(app.includes("stabilizeTrafficRouteStates"), "Traffic colors must be stabilized across consecutive readings.");
+assert(app.includes("data-signal-phase"), "Intersections must use alternating right-of-way phases.");
+assert(app.includes("collisionRoutePairs") && app.includes("MAP_CAR_COLLISION_DISTANCE"), "Crossing routes must reserve collision-free intersection space.");
 assert(!app.includes("visibility = \"hidden\""), "Map cars must never disappear to avoid a collision.");
-assert(!app.includes("wantsActive"), "Map traffic counts must not make cars appear or disappear mid-road.");
+assert(app.includes("wantsActive") && app.includes("const offscreen"), "Traffic density changes must occur only beyond the map edge.");
 assert(!read("scripts/render_map_options.py").includes("extend_route_offscreen"), "Car paths must never use artificial off-road extensions.");
+assert(read("scripts/render_map_options.py").includes('tags.get("oneway"') && read("scripts/render_map_options.py").includes('tags.get("junction") == "roundabout"'), "Connected routes must honor OSM one-way and roundabout direction.");
 assert(index.includes('role="button"') && index.includes('aria-pressed="false"'), "Map must expose its inversion control.");
 assert(styles.includes('[data-map-inverted="true"] .map-base-image'), "Map must invert only its black-and-white base image.");
 
