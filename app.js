@@ -46,7 +46,7 @@ const RESTAURANT_RADIUS_MILES = 1.5;
 const RESTAURANT_RADIUS_METERS = Math.round(RESTAURANT_RADIUS_MILES * 1609.344);
 const STORAGE_KEY = "custom-display-settings-v1";
 const LIVE_CACHE_KEY = "custom-display-live-cache-v1";
-const BUILD_VERSION = "75";
+const BUILD_VERSION = "76";
 const LEGACY_KEY_PREFIX = ["hea", "rth-dashboard-"].join("");
 const LEGACY_STORAGE_KEYS = Object.freeze({
   settings: `${LEGACY_KEY_PREFIX}settings-v2`,
@@ -78,6 +78,7 @@ const MAP_CAR_RESERVATION_DISTANCE = 120;
 const MAP_CAR_COLLISION_DISTANCE = 50;
 const MAP_CAR_SAME_ROUTE_DISTANCE = 90;
 const MAP_CAR_EMERGENCY_DISTANCE = 60;
+const MAP_CAR_FRAME_FALLBACK_MS = 80;
 const MAP_TRAFFIC_MAX_CARS = 28;
 const SCENE_PHOTOS = Object.freeze({
   fog: "./scenes/fog_daniel.png",
@@ -165,6 +166,7 @@ let trafficLayerConfig = null;
 let trafficToken = null;
 let lastTrafficUpdateAt = 0;
 let mapTrafficAnimationFrame = null;
+let mapTrafficAnimationTimer = null;
 let mapTrafficAnimationStates = [];
 let mapTrafficTargetCount = 13;
 let mapTrafficSpeedFactor = 1;
@@ -1215,6 +1217,7 @@ function startMapCarAnimation() {
   const host = $("mapTrafficLayer");
   if (!host) return;
   cancelAnimationFrame(mapTrafficAnimationFrame);
+  clearTimeout(mapTrafficAnimationTimer);
   const svg = host.querySelector("svg");
   if (!svg) return;
   mapTrafficAnimationStates = [...svg.querySelectorAll(".map-car")].map((car, index) => {
@@ -1284,6 +1287,19 @@ function startMapCarAnimation() {
     state.car.setAttribute("transform", `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)}) rotate(${point.angle.toFixed(2)})`);
   });
   let previousTime = performance.now();
+
+  const scheduleFrame = () => {
+    let completed = false;
+    const run = (time) => {
+      if (completed) return;
+      completed = true;
+      cancelAnimationFrame(mapTrafficAnimationFrame);
+      clearTimeout(mapTrafficAnimationTimer);
+      animate(Number.isFinite(time) ? time : performance.now());
+    };
+    mapTrafficAnimationFrame = requestAnimationFrame(run);
+    mapTrafficAnimationTimer = setTimeout(() => run(performance.now()), MAP_CAR_FRAME_FALLBACK_MS);
+  };
 
   const animate = (time) => {
     const elapsed = Math.min(0.05, Math.max(0, (time - previousTime) / 1000));
@@ -1408,9 +1424,9 @@ function startMapCarAnimation() {
         state.car.style.display = "none";
       }
     });
-    mapTrafficAnimationFrame = requestAnimationFrame(animate);
+    scheduleFrame();
   };
-  mapTrafficAnimationFrame = requestAnimationFrame(animate);
+  scheduleFrame();
 }
 
 async function updateMapTraffic() {
